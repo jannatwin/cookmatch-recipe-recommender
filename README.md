@@ -23,11 +23,13 @@ The current implementation instructions are in [implementation.md](implementatio
 ## Repository structure
 
 ```text
-app/ or src/app/          # Next.js App Router pages, layouts and route handlers
-src/components/           # Shared UI components
-src/features/             # Auth, pantry, recommendations, recipes and admin UI
+src/app/(auth)/           # Sign-in and registration
+src/app/(app)/            # Pantry, recipes, provider detail and admin screens
+src/app/api/v1/           # Authenticated JSON API Route Handlers
+src/components/           # Responsive app shell and feature workspaces
+src/lib/                  # Environment, auth clients, validation and API helpers
+src/proxy.ts              # Supabase cookie refresh and request security headers
 src/server/               # Domain services and server-only provider adapters
-src/lib/supabase/         # Supabase browser/server clients
 supabase/migrations/      # Versioned PostgreSQL schema and RLS policies
 supabase/seed.sql         # Local/demo seed data only
 ```

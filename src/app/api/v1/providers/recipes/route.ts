@@ -6,6 +6,7 @@ import { normalizeIngredientName, resolveIngredientNames } from "@/server/servic
 import { spoonacularProvider } from "@/server/providers/spoonacular";
 import { theMealDbProvider } from "@/server/providers/themealdb";
 import { ProviderError } from "@/server/providers/contracts";
+import { enforceSpoonacularLimit } from "@/server/providers/rate-limit";
 
 const querySchema = z.object({
   source: z.enum(["themealdb", "spoonacular"]),
@@ -29,6 +30,7 @@ export async function GET(request: Request) {
 
     const provider = query.data.source === "spoonacular" ? spoonacularProvider : theMealDbProvider;
     const resultLimit = query.data.source === "themealdb" ? Math.min(query.data.limit, 5) : query.data.limit;
+    if (query.data.source === "spoonacular") await enforceSpoonacularLimit(supabase, "spoonacular_search");
     const summaries = await provider.searchByIngredients(pantry.map((item) => item.name), resultLimit);
     const details = query.data.source === "themealdb"
       ? await Promise.all(summaries.map((summary) => provider.getRecipe(summary.sourceId)))

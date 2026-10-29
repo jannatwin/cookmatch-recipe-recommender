@@ -3,11 +3,13 @@ import { requireAdmin } from "@/lib/auth/require-user";
 import { parseJson } from "@/lib/validation/api";
 import { z } from "zod";
 
-const mappingSchema = z.object({
+const mappingBaseSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   substituteId: z.coerce.number().int().positive(),
   note: z.string().trim().max(255).optional().default(""),
-}).refine((input) => input.ingredientId !== input.substituteId, {
+});
+
+const mappingSchema = mappingBaseSchema.refine((input) => input.ingredientId !== input.substituteId, {
   path: ["substituteId"],
   message: "An ingredient cannot substitute itself",
 });
@@ -37,7 +39,7 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const { supabase } = await requireAdmin();
-    const input = await parseJson(request, mappingSchema.pick({ ingredientId: true, substituteId: true }));
+    const input = await parseJson(request, mappingBaseSchema.pick({ ingredientId: true, substituteId: true }));
     const { data, error } = await supabase
       .from("substitutes")
       .delete()

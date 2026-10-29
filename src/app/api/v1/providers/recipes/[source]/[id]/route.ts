@@ -6,6 +6,7 @@ import { normalizeIngredientName, resolveIngredientNames } from "@/server/servic
 import { spoonacularProvider } from "@/server/providers/spoonacular";
 import { theMealDbProvider } from "@/server/providers/themealdb";
 import { ProviderError } from "@/server/providers/contracts";
+import { enforceSpoonacularLimit } from "@/server/providers/rate-limit";
 
 const paramsSchema = z.object({ source: z.enum(["themealdb", "spoonacular"]), id: z.string().min(1).max(100) });
 type Context = { params: Promise<{ source: string; id: string }> };
@@ -15,6 +16,7 @@ export async function GET(_request: Request, context: Context) {
     const { supabase, user } = await requireUser();
     const params = paramsSchema.safeParse(await context.params);
     if (!params.success) throw new ApiError(400, "VALIDATION_ERROR", "Provider recipe identifier is invalid");
+    if (params.data.source === "spoonacular") await enforceSpoonacularLimit(supabase, "spoonacular_detail");
     const provider = params.data.source === "spoonacular" ? spoonacularProvider : theMealDbProvider;
     const recipe = await provider.getRecipe(params.data.id);
     if (!recipe) throw new ApiError(404, "NOT_FOUND", "Provider recipe was not found");
