@@ -49,12 +49,14 @@ The system has four parts that work together: a web user interface, a recommenda
 - Users can name their ingredients in text, and the database holds a matching ingredient name or alias.
 - A recipe database with ingredients, instructions and tags is available before the first release.
 - Users have an internet connection while using the system.
+- The planned recipe sources are TheMealDB and Spoonacular. Their API access, quota and data-use terms are external dependencies and must be confirmed before production use.
 
 ### 2.5 Constraints
 
 - The project is built within the Software Engineering course timeline and follows the standard SDLC phases.
 - Matching uses ingredient presence or absence only, not quantities.
 - Recommendation quality is limited by the completeness of the recipe and ingredient database.
+- The selected implementation baseline is TypeScript, Next.js App Router, Tailwind CSS, Supabase PostgreSQL/Auth, and Vercel hosting. Recipe provider access is through server-side integrations.
 
 ## 3. Functional Requirements
 

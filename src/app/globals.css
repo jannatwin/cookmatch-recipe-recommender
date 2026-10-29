@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #fff4e8;
+  --color-coral: #ff8a70;
+  --color-peach: #ffd3b8;
+  --color-mint: #bfe8d2;
+  --color-butter: #ffe7a3;
+  --color-lavender: #d9ccf5;
+  --color-cocoa: #4a3328;
+  --shadow-clay: 10px 10px 22px rgb(150 90 60 / 18%), inset 4px 4px 10px rgb(255 255 255 / 60%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-cream);
+  color: var(--color-cocoa);
+  font-family: Arial, Helvetica, sans-serif;
+}

@@ -1,180 +1,113 @@
-# CookMatch: Claymorphism Design
+# CookMatch: Tailwind CSS Design System
 
-UI design guide for CookMatch, a recipe recommendation system based on available ingredients.
+This document describes the visual and interaction design for the CookMatch Next.js application. Implement styles with **Tailwind CSS utility classes and theme tokens**. Do not introduce a separate plain-CSS component styling system. Small global CSS is acceptable only for Tailwind entry points, font registration, and truly global browser behavior that utilities cannot express.
 
 ## 1. Concept
 
-CookMatch should feel like a kitchen made of soft modeling clay: puffy, rounded, pastel and friendly. Every element looks like a squishy 3D object sitting on a warm cream surface.
+CookMatch should feel like a friendly kitchen made of soft modeling clay: rounded pastel surfaces, gentle depth and clear, touchable controls.
 
-- Ingredients are small clay pebbles.
-- Recipes are plump clay cards.
-- Buttons look like they can be pressed.
+- Ingredients are small clay pebbles (chips).
+- Recipes are rounded clay cards.
+- Buttons look pressable and visibly respond to interaction.
+- Design mobile-first, then expand to tablet and desktop.
 
-## 2. Colors
+## 2. Theme tokens
 
-| Role | Color | Hex |
+Use these colors consistently. Text contrast and control boundaries take priority over visual softness.
+
+| Token | Purpose | Hex |
 | --- | --- | --- |
-| Background | Warm cream | `#FFF4E8` |
-| Primary (buttons, active tab) | Tomato coral | `#FF8A70` |
-| Card base | Peach | `#FFD3B8` |
-| High match (80% and above) | Mint | `#BFE8D2` |
-| Almost-achievable (1 to 2 missing) | Butter yellow | `#FFE7A3` |
-| Substitute / info | Lavender | `#D9CCF5` |
-| Text | Cocoa brown | `#4A3328` |
+| `cream` | Page background | `#FFF4E8` |
+| `coral` | Primary action and active state | `#FF8A70` |
+| `peach` | Card surface | `#FFD3B8` |
+| `mint` | High match and pantry-have state | `#BFE8D2` |
+| `butter` | Almost-achievable and expiring state | `#FFE7A3` |
+| `lavender` | Substitute and informational state | `#D9CCF5` |
+| `cocoa` | Primary text | `#4A3328` |
 
-Never use pure black or pure white. Use cocoa for text and cream-white for highlights.
+Register the palette in the Tailwind theme, using the syntax supported by the project's installed Tailwind version. For Tailwind v4, prefer `@theme` tokens in the Tailwind entry stylesheet; for v3, use `theme.extend.colors` in `tailwind.config.ts`. This configuration is not permission to write component styles in standalone CSS.
 
-### CSS variables
+Example utility usage:
 
-```css
-:root {
-  --bg: #FFF4E8;
-  --primary: #FF8A70;
-  --card: #FFD3B8;
-  --match-high: #BFE8D2;
-  --match-almost: #FFE7A3;
-  --info: #D9CCF5;
-  --text: #4A3328;
-
-  --shadow-dark: rgba(150, 90, 60, 0.25);
-  --shadow-light: rgba(255, 255, 255, 0.7);
-}
+```tsx
+<main className="min-h-screen bg-cream text-cocoa">
+  <section className="rounded-[2rem] bg-peach p-6 shadow-clay">
+    <button className="rounded-full bg-coral px-7 py-3 font-bold text-cocoa shadow-clay hover:brightness-105 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-cocoa">
+      Find recipes
+    </button>
+  </section>
+</main>
 ```
 
-## 3. The Clay Effect
+`shadow-clay` above is a named Tailwind theme utility. Define reusable theme utilities with the installed Tailwind version's supported plugin/theme mechanism. If a one-off shadow is needed, use Tailwind arbitrary-value syntax. Avoid repeating long arbitrary values in many components; extract a React component or named utility.
 
-The look comes from three shadows layered on one shape: a soft outer shadow, a light inner highlight at the top-left, and a darker inner shade at the bottom-right.
+## 3. Clay surfaces and interaction
 
-```css
-.clay {
-  border-radius: 32px;
-  background: var(--card);
-  box-shadow:
-    12px 12px 24px var(--shadow-dark),              /* outer drop shadow */
-    inset 8px 8px 16px var(--shadow-light),         /* top-left highlight */
-    inset -8px -8px 16px var(--shadow-dark);        /* bottom-right shade */
-}
+Use rounded corners and layered, soft shadows to suggest depth. Keep shadows subtle enough that text and controls remain clear on low-brightness displays. Use pressed/hover/focus states with Tailwind state variants (`active:`, `hover:`, `focus-visible:`); avoid custom CSS selectors for component behavior.
 
-.clay:active {
-  box-shadow:
-    4px 4px 8px var(--shadow-dark),
-    inset 6px 6px 12px rgba(150, 90, 60, 0.3);      /* pressed-in look */
-  transform: scale(0.97);
-}
-```
+Prefer reusable components such as `Button`, `IngredientChip`, `RecipeCard`, `MatchBadge`, `FilterChip` and `Input`. Put class composition in those components so the design stays consistent.
 
-Use the same recipe on every component. Only the base color and the radius change.
+## 4. Typography and spacing
 
-## 4. Typography
+| Use | Style |
+| --- | --- |
+| Headings | Rounded display font such as Baloo 2 or Fredoka; 24–32 px |
+| Body | Nunito or a readable system sans; 16 px with generous line height |
+| Recipe titles | Display font; 22–24 px |
+| Labels and chips | Body font, medium weight; at least 14 px |
+| Spacing | 8, 16, 24 and 32 px rhythm |
+| Corners | Cards 32–36 px; chips/buttons fully rounded |
 
-| Use | Font | Size |
-| --- | --- | --- |
-| Headings | Baloo 2 or Fredoka (rounded, bold) | 24 to 32 px |
-| Body | Nunito | 16 px, generous line height |
-| Recipe titles | Baloo 2 or Fredoka | 22 to 24 px |
-| Labels and chips | Nunito, medium weight | 14 px |
-
-Rounded fonts match the puffy shapes.
+Load fonts with `next/font` where possible. Use responsive Tailwind breakpoints for layout and type scaling.
 
 ## 5. Components
 
-| Component | Design |
+| Component | Design and behavior |
 | --- | --- |
-| Buttons | Pill shape (radius 999 px), coral fill, cream text. The pressed state sinks inward |
-| Ingredient chips | Small mint or peach clay pebbles with a tiny "x" to remove. An expiring ingredient gets a butter-yellow tint and a small clock icon |
-| Input field | Inset (carved-in) clay bar with the shadows reversed, so it looks pressed into the surface. Suggestions drop down as a stack of small clay tiles |
-| Recipe card | Radius 36 px, round food image at the top with a clay border, title, cooking time and cuisine tag. A circular match-score badge sits at the top-right corner |
-| Match-score badge | Clay ring with the percentage in the center. Mint for 80% and above, yellow for almost-achievable, peach for lower scores |
-| Missing ingredient tag | Small coral pebble. Tapping it opens a lavender clay bubble showing the substitute |
-| Filters | Row of toggle pills for cuisine, time and diet. Selected pills are pressed in and turn coral |
-| Navigation | Floating clay bar at the bottom on mobile (Home, Pantry, Recipes, Profile). Floating clay sidebar on desktop |
-
-### Inset input example
-
-```css
-.clay-input {
-  border-radius: 24px;
-  background: #FFE9D6;
-  border: none;
-  padding: 14px 20px;
-  color: var(--text);
-  box-shadow:
-    inset 6px 6px 12px var(--shadow-dark),
-    inset -6px -6px 12px var(--shadow-light);
-}
-```
-
-### Button example
-
-```css
-.clay-button {
-  border-radius: 999px;
-  background: var(--primary);
-  color: #FFF4E8;
-  padding: 14px 28px;
-  font-weight: 700;
-  border: none;
-  box-shadow:
-    10px 10px 20px var(--shadow-dark),
-    inset 6px 6px 12px rgba(255, 255, 255, 0.5),
-    inset -6px -6px 12px rgba(150, 60, 40, 0.3);
-}
-```
+| Buttons | Pill shape, coral primary fill, distinct hover/active/focus states; disabled state remains readable |
+| Ingredient chips | Mint/peach surfaces; remove button has an accessible name. Expiring items use butter plus a clock icon and text |
+| Ingredient input | Inset-looking rounded field; suggestions appear in a keyboard-navigable listbox |
+| Recipe card | Rounded surface, image when permitted, title, time, cuisine, score badge and missing ingredient summary |
+| Match badge | Shows numeric percentage and a text label; color is never the only signal |
+| Missing ingredient | Coral chip with a clear substitute disclosure/action where available |
+| Filters | Responsive toggle/select controls for cuisine, time and diet; combined filters preserve ranking |
+| Navigation | Bottom navigation on mobile and a clear top/side navigation on larger screens |
 
 ## 6. Screens
 
-1. **Register / Log in:** one large clay card centered on cream, with two carved-in inputs, a coral "Log in" pill, and a floating clay pot illustration above it.
-2. **Enter ingredients:** a big carved search bar at the top, a growing cloud of ingredient pebbles below, and a coral "Find recipes" button fixed at the bottom.
-3. **Recommendations:** filter pills at the top, then a vertical list of recipe cards sorted by match score. An "Almost there" section in yellow follows the main list.
-4. **Recipe details:** a large round image, an ingredient list with have (mint) and missing (coral) pebbles, numbered steps on clay tiles, and a big "Start cooking" pill at the bottom.
+1. **Register / Log in:** centered accessible form card with clear labels, errors and recovery links when enabled.
+2. **Pantry:** searchable ingredient input, selected ingredient chips, expiry-date control and a prominent recommendation action.
+3. **Recommendations:** responsive filters and ranked recipe cards; clearly show score, have/missing items, expiry and near-match status.
+4. **Recipe detail:** image when allowed, complete ingredient list with pantry state, substitutes, ordered instructions and a start-cooking interaction.
+5. **Admin:** usable CRUD forms and tables for recipes, ingredients, aliases and substitutes.
 
-## 7. Spacing and Shape
+## 7. Responsive layout and motion
 
-| Item | Value |
+- Page side padding: 16 px on mobile and 32 px on desktop.
+- Cards use a single column on small screens and a grid when sufficient width is available.
+- Touch targets are at least 44 by 44 px.
+- Use Tailwind transitions sparingly. Respect reduced motion through supported `motion-reduce:` variants; do not require a custom animation stylesheet.
+- Keep mobile navigation reachable without covering important content.
+
+## 8. Accessibility
+
+- Use semantic HTML, associated labels, visible keyboard focus and logical heading order.
+- Keep text contrast at WCAG AA levels; test actual combinations rather than assuming pastel colors pass.
+- Never communicate match status by color alone; include the percentage and labels such as “missing 1”.
+- Autocomplete must support keyboard navigation and announce suggestions/results.
+- Give icon-only controls accessible names; do not use emoji as the only label.
+- Respect reduced motion and avoid interaction that depends on hover alone.
+
+## 9. Do and avoid
+
+| Do | Avoid |
 | --- | --- |
-| Spacing scale | 8, 16, 24, 32 px |
-| Card radius | 32 to 36 px |
-| Chip radius | 999 px (fully round) |
-| Page side padding | 16 px on mobile, 32 px on desktop |
-| Gap between cards | 20 to 24 px, so the outer shadows do not overlap |
+| Use the documented Tailwind tokens and reusable components | Add a parallel component CSS framework |
+| Keep surfaces soft but readable | Use weak contrast or invisible borders |
+| Leave enough space for shadows and touch | Crowd cards together |
+| Pair color with text and icons | Rely on color alone |
+| Keep motion short and optional | Add long or distracting animation |
 
-## 8. Motion
+## 10. Related documents
 
-- Cards and chips slide in with a soft bounce (spring easing, about 300 ms).
-- Pressing a button squishes it to 97% scale, then springs back.
-- Adding an ingredient makes its pebble "pop" in with a slight overshoot.
-- The match-score ring fills smoothly from 0 to its value.
-- Respect the reduced-motion setting by turning these off.
-
-```css
-@media (prefers-reduced-motion: reduce) {
-  * { animation: none !important; transition: none !important; }
-}
-```
-
-## 9. Accessibility
-
-- Keep cocoa text on every clay surface; it passes the 4.5:1 contrast ratio on all the colors above.
-- Never use color alone for match status. Always show the percentage and a label such as "missing 1" next to the color.
-- Keep touch targets at least 44 px tall.
-- Give focus states a clear 3 px coral outline.
-- Soft shadows can look weak on some screens, so check the cards against the cream background on a low-brightness display.
-
-## 10. Do and Don't
-
-| Do | Don't |
-| --- | --- |
-| Use the same shadow recipe everywhere | Mix flat and clay styles on one screen |
-| Keep shapes round and chunky | Use sharp corners or thin lines |
-| Use soft pastel colors with cocoa text | Use pure black, pure white or neon colors |
-| Leave generous space between elements | Crowd cards so the shadows overlap |
-| Show match status with text and color | Rely on color alone |
-| Keep animations short and gentle | Add long or flashy animations |
-
-## 11. Related Documents
-
-| Document | Contents |
-| --- | --- |
-| `README.md` | Project overview and setup |
-| `cookmatch_architecture_and_database.md` | Architecture and database design |
-| `api.md` | API reference used by the screens |
+See `implementation.md` for the selected stack, `CookMatch Software Requirements Specification.md` for the required screens and behaviors, and `README.md` for setup.

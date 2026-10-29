@@ -1,279 +1,71 @@
 # CookMatch
 
-**A smart recipe recommendation system based on available ingredients.**
+CookMatch is a responsive recipe recommendation web application. Users enter ingredients they have at home and receive recipes ranked by ingredient match, with missing ingredients, substitutes, expiry prioritization and cooking instructions.
 
-CookMatch is a web-based system that helps users decide what to cook using the ingredients they already have at home. The user enters the ingredients in their kitchen, and CookMatch returns a ranked list of recipes they can prepare. It also highlights recipes that are almost achievable with only one or two missing ingredients, and suggests substitutes when an ingredient is unavailable.
+## Product requirements
 
-This project is developed for the Software Engineering course. It applies the full software development life cycle (SDLC): requirement analysis, system design, use case modeling and implementation planning.
+See [CookMatch Software Requirements Specification](CookMatch%20Software%20Requirements%20Specification.md) for the authoritative behavior. The first release includes account management, pantry management, recommendations and filters, recipe details, and admin catalog management. Matching is based on ingredient presence; quantities are not considered.
 
----
+## Technology stack
 
-## Table of Contents
-
-1. [Problem Statement](#problem-statement)
-2. [Objectives](#objectives)
-3. [Key Features](#key-features)
-4. [How It Works](#how-it-works)
-5. [System Architecture](#system-architecture)
-6. [Tech Stack](#tech-stack)
-7. [Project Structure](#project-structure)
-8. [Getting Started](#getting-started)
-9. [Configuration](#configuration)
-10. [API Overview](#api-overview)
-11. [Database Overview](#database-overview)
-12. [UI Design](#ui-design)
-13. [Limitations](#limitations)
-14. [Future Enhancements](#future-enhancements)
-15. [Documentation](#documentation)
-16. [Team](#team)
-
----
-
-## Problem Statement
-
-People often struggle to decide what to cook when they do not want to buy new ingredients and only wish to use what is already at home. Traditional recipe websites are built around searching by dish name or by a single ingredient, and they do not tell the user how many required ingredients are missing. This wastes time on unusable recipes, causes unnecessary grocery purchases, and often leaves food unused until it spoils.
-
-CookMatch takes the ingredients a user already owns as the main input and produces practical, ready-to-cook suggestions, while also reducing food waste.
-
-## Objectives
-
-1. Recommend recipes based on the ingredients currently available to the user.
-2. Rank recipes by the percentage of required ingredients the user already has.
-3. Reduce household food waste by prioritizing recipes that use ingredients close to expiry.
-4. Suggest substitute ingredients when a recipe is missing one or more items.
-5. Let users filter recipes by cuisine, cooking time and dietary preference.
-6. Apply standard Software Engineering practices (requirement specification, use case modeling and system design) throughout development.
-
-## Key Features
-
-| Feature | Description |
+| Area | Selected technology |
 | --- | --- |
-| Account management | Register, log in and log out |
-| Ingredient input | Type ingredients with name suggestions, add or remove them, and optionally set expiry dates |
-| Smart matching | Ranks recipes by match score, the share of required ingredients the user has |
-| Almost-achievable recipes | Highlights recipes missing only one or two ingredients |
-| Substitute suggestions | Shows replacement options for missing ingredients |
-| Expiry prioritization | Recipes that use ingredients close to expiry rank higher |
-| Filters | Filter by cuisine, cooking time and dietary preference |
-| Recipe details | Full ingredient list, step-by-step instructions and image |
-| Admin tools | Manage recipes, ingredients, aliases and substitutes |
+| Language | TypeScript (strict mode) |
+| Framework | Next.js App Router (React) |
+| Styling | Tailwind CSS, using the design tokens and accessible claymorphism guidance in `Design.md` |
+| Database | Supabase PostgreSQL |
+| Authentication | Supabase Auth with cookie-based SSR via `@supabase/ssr` |
+| Hosting | Vercel for the Next.js app; Supabase for database/Auth and optional Storage |
+| Recipe sources | TheMealDB and Spoonacular through server-only provider adapters |
 
-## How It Works
+The current implementation instructions are in [implementation.md](implementation.md). That file supersedes older Express, plain CSS styling, local JWT, and local PostgreSQL setup examples elsewhere in the original planning docs. AI coding agents should first read [AGENTS.md](AGENTS.md).
 
-1. The user registers or logs in.
-2. The user enters the ingredients they have.
-3. CookMatch validates the input and sends the request to the recommendation engine.
-4. The engine searches the recipe database and calculates a match score for each recipe:
+## Repository structure
 
-   ```
-   Match score = (ingredients the user has / ingredients the recipe requires) x 100%
-   ```
-
-5. Recipes are ranked from highest to lowest score. Recipes that use expiring ingredients rank above recipes with a similar score.
-6. The user views the ranked list, applies filters, and selects a recipe.
-7. CookMatch shows the complete recipe, and the user starts cooking.
-
-Matching is based on the presence or absence of ingredients only. Quantities are not considered.
-
-## System Architecture
-
-CookMatch uses a layered client-server architecture.
-
-| Layer | Responsibility |
-| --- | --- |
-| Presentation | Web UI for login, ingredient entry, recommendations, filters and recipe details |
-| Application | REST API that handles requests, validation and authentication |
-| Business logic | Ingredient normalizer, matching and ranking engine, substitute finder |
-| Data | Relational database for users, ingredients, recipes, substitutes and pantry data |
-
-```
-Browser  <--HTTPS/JSON-->  REST API  -->  Matching Engine  -->  Database
+```text
+app/ or src/app/          # Next.js App Router pages, layouts and route handlers
+src/components/           # Shared UI components
+src/features/             # Auth, pantry, recommendations, recipes and admin UI
+src/server/               # Domain services and server-only provider adapters
+src/lib/supabase/         # Supabase browser/server clients
+supabase/migrations/      # Versioned PostgreSQL schema and RLS policies
+supabase/seed.sql         # Local/demo seed data only
 ```
 
-See [`cookmatch_architecture_and_database.md`](cookmatch_architecture_and_database.md) for the component diagram, sequence diagram and module details.
+Follow the existing repository layout if implementation has already established one; do not create duplicate `client/` and `server/` applications.
 
-## Tech Stack
+## Local setup
 
-> This is the proposed stack. Update it if the team uses different tools.
+Prerequisites: Node.js 20.9 or later, npm, Docker Desktop/Engine for local Supabase, and a Supabase project for deployment.
 
-| Part | Technology |
-| --- | --- |
-| Frontend | React, CSS (claymorphism style) |
-| Backend | Node.js, Express |
-| Database | PostgreSQL |
-| Authentication | JWT, bcrypt |
-| API style | REST over HTTPS, JSON |
+1. Install dependencies with `npm install`.
+2. Start the local Supabase stack with `npm run supabase:start`; copy its Project URL and publishable key into `.env.local` based on `.env.example`.
+3. Apply migrations and development seed data with `npm run db:reset`.
+4. Start Next.js with `npm run dev` and open `http://localhost:3000`.
+5. Check `http://localhost:3000/api/v1/health` for the backend health route.
 
-## Project Structure
+Stop the local stack with `npm run supabase:stop`. Never commit `.env.local`, Supabase secret keys, or provider API keys.
 
-```
-cookmatch/
-  client/                  # React web app
-    src/
-      pages/               # Login, Pantry, Recommendations, RecipeDetails
-      components/          # RecipeCard, IngredientChip, FilterPills, ScoreBadge
-      api/                 # API call helpers
-  server/
-    src/
-      routes/              # auth, pantry, recommendations, recipes, admin
-      controllers/
-      services/            # normalizer, matcher, substitutes
-      middleware/          # auth, role check, validation
-      db/                  # connection, migrations, seed data
-  docs/                    # SRS, architecture, API, design files
-  README.md
-```
+To regenerate Supabase TypeScript types after changing the schema, run `npm run db:types`. To make a local account an admin, sign up through the app and update that account's `profiles.role` with the local Supabase SQL editor; public registration never grants admin access.
 
-## Getting Started
+## Environment configuration
 
-### Prerequisites
+Expected variable names are listed in `.env.example`. Public Supabase URL/publishable key may use `NEXT_PUBLIC_`; any Supabase secret and recipe provider keys must remain server-only. Configure separate values for local development, Vercel preview and production. Add auth callback URLs for each environment in Supabase.
 
-- Node.js 18 or later
-- PostgreSQL 14 or later
-- npm
+## Recipe data and attribution
 
-### Installation
-
-```bash
-# 1. Clone the repository
-git clone <repository-url>
-cd cookmatch
-
-# 2. Install backend dependencies
-cd server
-npm install
-
-# 3. Install frontend dependencies
-cd ../client
-npm install
-```
-
-### Set up the database
-
-```bash
-# Create the database
-createdb cookmatch
-
-# Create tables (schema is in cookmatch_architecture_and_database.md)
-psql -d cookmatch -f server/src/db/schema.sql
-
-# Load sample data
-psql -d cookmatch -f server/src/db/seed.sql
-```
-
-### Run the app
-
-```bash
-# Start the backend (from /server)
-npm run dev
-
-# Start the frontend (from /client)
-npm start
-```
-
-The frontend runs at `http://localhost:3000` and the API at `http://localhost:5000` by default.
-
-> The commands above assume the folder structure and npm scripts shown in this README. Adjust them to match the final code.
-
-## Configuration
-
-Create a `.env` file in the `server` folder:
-
-```env
-PORT=5000
-DATABASE_URL=postgresql://user:password@localhost:5432/cookmatch
-JWT_SECRET=change-this-to-a-long-random-string
-JWT_EXPIRES_IN=1h
-EXPIRY_WARNING_DAYS=3
-```
-
-| Variable | Meaning |
-| --- | --- |
-| `PORT` | Port the API listens on |
-| `DATABASE_URL` | PostgreSQL connection string |
-| `JWT_SECRET` | Secret used to sign tokens; keep it private |
-| `JWT_EXPIRES_IN` | Token lifetime |
-| `EXPIRY_WARNING_DAYS` | How many days before expiry an ingredient counts as "expiring soon" |
-
-Never commit the `.env` file to version control.
-
-## API Overview
-
-Base path: `/v1`. All requests and responses use JSON. Protected endpoints need the header `Authorization: Bearer <token>`.
-
-| Method | Endpoint | Purpose | Access |
-| --- | --- | --- | --- |
-| POST | `/auth/register` | Create an account | Public |
-| POST | `/auth/login` | Log in | Public |
-| GET | `/ingredients/search?q=` | Ingredient suggestions | User |
-| GET / PUT | `/pantry` | View or replace the pantry | User |
-| GET | `/recommendations` | Ranked recipes with filters | User |
-| GET | `/recipes/{id}` | Recipe details | User |
-| POST / PUT / DELETE | `/recipes` | Manage recipes | Admin |
-| POST | `/ingredients`, `/substitutes` | Manage ingredients and substitutes | Admin |
-
-Example request:
-
-```
-GET /v1/recommendations?cuisine=1&maxTime=30&diet=Vegetarian
-```
-
-See [`api.md`](api.md) for the full reference with request and response examples.
-
-## Database Overview
-
-PostgreSQL with 11 tables:
-
-`users`, `ingredients`, `ingredient_aliases`, `pantry_items`, `cuisines`, `recipes`, `recipe_ingredients`, `recipe_steps`, `dietary_tags`, `recipe_dietary_tags`, `substitutes`
-
-Recipes link to ingredients through `recipe_ingredients` (presence only, no quantity). Alternative and regional ingredient names are stored in `ingredient_aliases`, so new names can be added without changing recipes.
-
-See [`cookmatch_architecture_and_database.md`](cookmatch_architecture_and_database.md) for the ER diagram, SQL schema and the core matching query.
-
-## UI Design
-
-The interface uses a **claymorphism** style: soft, puffy, pastel elements that look like modeling clay on a warm cream background.
-
-- Ingredients appear as small clay chips; recipes appear as plump clay cards.
-- A circular badge on each card shows the match score. Mint means a high match, butter yellow means almost achievable.
-- Buttons squish when pressed.
-- Cocoa-brown text keeps contrast readable, and match status is never shown by color alone.
-
-## Limitations
-
-- Recommendation accuracy depends on how complete and correct the recipe and ingredient database is.
-- Matching ignores ingredient quantities and checks presence only.
-- Nutritional and dietary information, if included, is approximate and not verified by a certified nutritionist.
-- Image-based ingredient recognition (for example, detecting ingredients from a photo of a fridge) is not supported.
-- Regional and local ingredient names may not be fully standardized in the first version of the database.
-
-## Future Enhancements
-
-- Personalized recommendations based on user preferences and previous recipe choices
-- Recommendations based on nutritional requirements
-- Quantity-aware matching
-- Ingredient recognition from photos
-- Standardized regional and local ingredient names
+TheMealDB and Spoonacular are external API providers, not unrestricted datasets. Use official APIs only. Before importing or caching provider data, check the current API terms, plan, quota, attribution and storage rights. Keep provider calls on the server. Persist source IDs and required attribution wherever permitted, and never imply the catalog is exhaustive if a provider or quota is unavailable. Details are in `implementation.md`.
 
 ## Documentation
 
-| Document | Contents |
+| File | Purpose |
 | --- | --- |
-| [`api.md`](api.md) | Full API reference |
-| [`cookmatch_architecture_and_database.md`](cookmatch_architecture_and_database.md) | Architecture, diagrams, database schema and queries |
-| Software Requirements Specification | Functional requirements (FR-1 to FR-21), non-functional requirements, use cases |
-
-## Team
-
-| Name | Role |
-| --- | --- |
-| _Add name_ | _Add role_ |
-| _Add name_ | _Add role_ |
-
-**Course:** Software Engineering
-**Instructor:** _Add name_
-**Submission date:** _Add date_
-
-## License
-
-_Add a license if the project will be shared publicly, or note that it is for academic use only._
+| `implementation.md` | Selected stack, architecture, database, integrations, security, build phases and acceptance gates |
+| `CookMatch Software Requirements Specification.md` | Product scope and functional/non-functional requirements |
+| `Design.md` | Tailwind-oriented visual system and responsive UI requirements |
+| `API.md` | JSON API contract for Route Handlers where implemented |
+| `Authentication_and_Security.md` | Supabase Auth, RLS and application security |
+| `cookmatch_architecture_and_database.md` | System architecture and data model |
+| `Integration.md` | App, Supabase, providers and Vercel integration |
+| `Testing & QA.md` | Requirement-linked verification plan |
+| `Debugging.md` | Troubleshooting guide for the selected stack |

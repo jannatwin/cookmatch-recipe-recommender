@@ -1,7 +1,6 @@
 # CookMatch: Testing and QA Plan
 
-Testing and quality assurance plan for CookMatch, a recipe recommendation system based on available ingredients.
-Every test case traces back to a requirement in the Software Requirements Specification (FR-1 to FR-21, NFR-1 to NFR-11) and to an endpoint in `api.md`.
+Testing and quality assurance plan for CookMatch, built with TypeScript, Next.js App Router, Tailwind CSS and Supabase/PostgreSQL. Every test case traces to the SRS (FR-1 to FR-21, NFR-1 to NFR-11). Verify UI behavior through the app and app-level Route Handlers/Server Actions; Supabase Auth and RLS are part of the system under test.
 
 > Tools, thresholds and schedules below are proposed defaults. Adjust them to the team's final setup.
 
@@ -29,9 +28,9 @@ Every test case traces back to a requirement in the Software Requirements Specif
 
 | Level | What it checks | Who | Proposed tools |
 | --- | --- | --- | --- |
-| Unit | Single functions: normalizer, match score, ranking, substitute lookup, validators | Developers | Jest |
-| Integration | API endpoints with the real database; module-to-module calls | Developers | Supertest, test PostgreSQL database |
-| System (end to end) | Full user flows in the browser | QA / team | Cypress or Playwright |
+| Unit | Single functions: normalizer, match score, ranking, substitute lookup, validators | Developers | Vitest or the test runner selected by the repository |
+| Integration | Server actions/Route Handlers with Supabase schema and RLS | Developers | Supabase local/test project and the selected TypeScript runner |
+| System (end to end) | Full user flows in the browser | QA / team | Playwright |
 | Acceptance | Requirements met from the user's point of view | Whole team, instructor demo | Manual checklist |
 | Performance | Response time and concurrent users | QA | k6 or Apache JMeter |
 | Security | Authentication, authorization, injection, password storage | QA | Manual checks, OWASP ZAP |
@@ -52,8 +51,8 @@ Every test case traces back to a requirement in the Software Requirements Specif
 
 | Item | Setup |
 | --- | --- |
-| Test database | Separate PostgreSQL database, reset and re-seeded before each integration run |
-| Backend | Node.js server in test mode |
+| Test database | Separate Supabase/PostgreSQL test project or local Supabase stack, reset and re-seeded before each integration run |
+| Application | Next.js server in test mode |
 | Frontend | Latest Chrome, Firefox, Edge, Safari; mobile widths of 375 px and 768 px |
 | Accounts | One normal user, one admin, one empty-pantry user |
 | Network | HTTPS for staging; local HTTP allowed only during development |
@@ -62,7 +61,7 @@ Every test case traces back to a requirement in the Software Requirements Specif
 
 ## 4. Test Data
 
-Use this fixed dataset so expected results can be calculated by hand.
+Use this fixed deterministic CookMatch fixture so expected results can be calculated by hand. Keep it separate from imported TheMealDB/Spoonacular data. Automated checks must mock provider responses and must not consume paid API quota.
 
 **Ingredients:** Egg, Onion, Tomato, Rice, Butter, Oil, Salt, Chili, Garlic, Chicken
 
@@ -113,12 +112,12 @@ Status values: Not run, Pass, Fail, Blocked. Priority: High, Medium, Low.
 | TC-002 | FR-1 | Register with duplicate email | Register again with the same email | Status 409 `DUPLICATE` | High |
 | TC-003 | FR-1 | Register with invalid email | Send `abc` as email | Status 400 `VALIDATION_ERROR` | High |
 | TC-004 | FR-1 | Register with short password | Send a 5-character password | Status 400 `VALIDATION_ERROR` | Medium |
-| TC-005 | FR-2 | Log in with correct credentials | Send valid email and password | Status 200, token returned | High |
+| TC-005 | FR-2 | Log in with correct credentials | Sign in through the Supabase Auth flow | User session established securely; protected page loads | High |
 | TC-006 | FR-3 | Log in with wrong password | Send valid email, wrong password | Status 401 `INVALID_CREDENTIALS`, message does not say which field was wrong | High |
 | TC-007 | FR-3 | Log in with unknown email | Send an unregistered email | Status 401 `INVALID_CREDENTIALS`, same message as TC-006 | High |
-| TC-008 | FR-2 | Log out | Call logout with a valid token | Status 204, user returns to login page in the UI | Medium |
-| TC-009 | NFR-7 | Access protected endpoint without token | Call `GET /pantry` with no token | Status 401 `TOKEN_INVALID` | High |
-| TC-010 | NFR-7 | Use an expired token | Call `GET /pantry` with an expired token | Status 401 `TOKEN_INVALID` | Medium |
+| TC-008 | FR-2 | Log out | Sign out using the authenticated session | Session cleared; user returns to login page | Medium |
+| TC-009 | NFR-7 | Access protected page without session | Request pantry with no Supabase session | Redirect or 401; no pantry data returned | High |
+| TC-010 | NFR-7 | Use an expired session | Request pantry with expired Supabase session | Refresh flow or sign-in redirect; no private data returned | Medium |
 
 ### 5.2 Ingredient input and pantry (FR-4 to FR-7)
 
@@ -217,7 +216,7 @@ Status values: Not run, Pass, Fail, Blocked. Priority: High, Medium, Low.
 | E2E-2 | Filter journey | Log in, enter ingredients, apply cuisine and time filters, open a recipe | Filtered list is correct, details match the card | High |
 | E2E-3 | Almost-there journey | Enter ingredients that leave one item missing, view the recipe, read the substitute | Recipe flagged as almost achievable, substitute shown | High |
 | E2E-4 | Admin journey | Admin adds a recipe, user enters its ingredients, recipe appears | New recipe is recommended | Medium |
-| E2E-5 | Session expiry | Wait for token to expire, then act | User is sent to the login page with a clear message | Medium |
+| E2E-5 | Session expiry | Expire/revoke the Supabase session, then act | User is sent to sign-in or session refresh is handled safely | Medium |
 
 ---
 
@@ -236,12 +235,12 @@ Status values: Not run, Pass, Fail, Blocked. Priority: High, Medium, Low.
 
 | ID | Test | Method | Pass criteria |
 | --- | --- | --- | --- |
-| ST-1 | Password storage | Inspect the `users` table | Only salted hashes, no plain text |
+| ST-1 | Password storage | Inspect app schema and Supabase Auth configuration | App tables contain no password or password-hash columns; credentials are managed by Supabase Auth |
 | ST-2 | SQL injection | Send `' OR 1=1 --` in login, search and filter fields | Rejected or treated as plain text, no data leak |
 | ST-3 | Cross-site scripting | Send `<script>alert(1)</script>` as a name and as ingredient text | Escaped, never executed |
 | ST-4 | Role escalation | Normal user calls every admin endpoint | Always 403 |
 | ST-5 | Data isolation | User A tries to read or change user B's pantry by changing IDs | Not possible |
-| ST-6 | Token tampering | Edit the token payload and call the API | 401 `TOKEN_INVALID` |
+| ST-6 | Session tampering | Alter/remove the session cookie and request a protected page/action | Request is rejected or redirected to sign-in; no protected data is returned |
 | ST-7 | HTTPS only | Open the site over plain HTTP | Redirect to HTTPS or refusal |
 | ST-8 | Error messages | Trigger a 500 error | No stack trace or database details shown |
 | ST-9 | Login brute force | Repeated wrong passwords | Rate limit or lockout applies (if implemented) |
