@@ -119,6 +119,7 @@ Paginated responses include:
 | 20 | DELETE | `/substitutes` | Remove a substitute mapping | Admin | FR-21 |
 | 21 | GET | `/providers/recipes?source=...` | Search a selected provider using the current pantry | User | FR-8 to FR-14 |
 | 22 | GET | `/providers/recipes/{source}/{id}` | Load selected provider recipe details | User | FR-17, FR-18 |
+| 23 | GET | `/admin/catalog` | List CookMatch-owned recipes and catalog values for admin tools | Admin | FR-20, FR-21 |
 
 ---
 
@@ -500,6 +501,16 @@ Errors: `404 NOT_FOUND`.
 
 All endpoints in this section require the `admin` role. A normal user receives `403 FORBIDDEN`.
 
+### 7.0 Read the admin catalog
+
+`GET /admin/catalog` · Admin
+
+Returns CookMatch-owned recipes (including drafts), ingredients, aliases, cuisines, dietary tags and substitute mappings for the catalog management screen. Provider-owned records are not included.
+
+Response `200 OK`: `{ "recipes": [], "ingredients": [], "aliases": [], "cuisines": [], "dietaryTags": [], "substitutes": [] }`. Each recipe includes editable ingredient IDs, dietary tag IDs and ordered instructions.
+
+Errors: `401 TOKEN_INVALID`, `403 FORBIDDEN`, `500 SERVER_ERROR`.
+
 ### 7.1 Create a recipe
 
 `POST /recipes`  ·  Admin
@@ -630,7 +641,7 @@ Errors: `403 FORBIDDEN`, `404 NOT_FOUND`.
 
 `GET /providers/recipes?source=themealdb&limit=5` · User
 
-The user must have a non-empty pantry. `source` is `themealdb` or `spoonacular`; `limit` is 1–10 (TheMealDB is capped at 5 because the free V1 API searches ingredients individually). The request is performed server-side and results are not persisted to the CookMatch catalog. Results include an ingredient match score calculated against the user's canonical pantry and provider attribution.
+The user must have a non-empty pantry. `source` is `themealdb` or `spoonacular`; `limit` is 1–10 (TheMealDB is capped at 5 because the free V1 API searches ingredients individually). The request is performed server-side and results are not persisted to the CookMatch catalog. Results include an ingredient match score calculated against the user's canonical pantry and provider attribution. Spoonacular search requests are limited to 30 per user per hour.
 
 Errors: `400 VALIDATION_ERROR`, `401 TOKEN_INVALID`, `429 RATE_LIMITED`, `502` when the provider is unavailable, or `503` when a provider key is not configured.
 
@@ -638,7 +649,7 @@ Errors: `400 VALIDATION_ERROR`, `401 TOKEN_INVALID`, `429 RATE_LIMITED`, `502` w
 
 `GET /providers/recipes/{source}/{id}` · User
 
-Loads one recipe from its selected provider, maps ingredients to the CookMatch catalog where possible, marks pantry matches and includes source attribution. Provider terms, API quotas and image/data use restrictions still apply.
+Loads one recipe from its selected provider, maps ingredients to the CookMatch catalog where possible, marks pantry matches and includes source attribution. Spoonacular detail requests are limited to 30 per user per hour. Provider terms, API quotas and image/data use restrictions still apply.
 
 ---
 

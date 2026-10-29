@@ -71,9 +71,10 @@ src/
     (app)/pantry/page.tsx
     (app)/recipes/page.tsx
     (app)/recipes/[id]/page.tsx
-    (app)/admin/...
+    (app)/provider-recipes/[source]/[id]/page.tsx
+    (app)/admin/page.tsx
     auth/callback/route.ts
-    api/.../route.ts
+    api/v1/.../route.ts
   components/                 # shared accessible UI and feature components
   features/
     auth/
@@ -84,7 +85,7 @@ src/
   lib/
     supabase/client.ts
     supabase/server.ts
-    proxy.ts                  # refresh Supabase SSR cookies (Next.js 16)
+  proxy.ts                    # refresh Supabase SSR cookies (Next.js 16; beside src/app)
     env.ts
     validation/                # Zod schemas
   server/

@@ -46,8 +46,8 @@ Never expose a Supabase secret key to client code. It bypasses RLS; prefer user-
 - Normalize ingredient strings for matching while preserving display text. Unknown ingredient names must not partially replace the pantry.
 - Use Supabase query APIs or parameterized SQL/RPCs. Never concatenate user values into SQL.
 - Render untrusted recipe/provider text as text. Avoid `dangerouslySetInnerHTML`; if rich text becomes necessary, sanitize with a maintained allow-list sanitizer.
-- Apply request size limits and rate limits to sign-in, ingredient search and metered provider calls.
-- Add secure response headers and a restrictive Content Security Policy compatible with the required image/font providers.
+- Apply request size limits and rate limits to sign-in, ingredient search and metered provider calls. Spoonacular search and detail calls are capped at 30 per user per hour for each action in PostgreSQL; Supabase Auth also enforces its configured authentication limits.
+- Add secure response headers and a nonce-based Content Security Policy compatible with provider images and Supabase requests. Production responses use HSTS; the CSP permits `https:` images/connections so provider and Supabase hosts can vary by environment.
 - Configure auth redirect URLs, CORS/origins and Supabase allowed URLs explicitly for local, preview and production environments.
 
 ## 6. Operational checks

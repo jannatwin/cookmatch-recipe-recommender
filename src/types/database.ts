@@ -125,6 +125,20 @@ isOneToOne: false
                   Relationships: [
 
                   ]
+                },"provider_request_limits": {
+                  Row: {
+                    "action": string,"request_count": number,"user_id": string,"window_start": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": string,"request_count": number,"user_id": string,"window_start": string
+                  }
+                  Update: {
+                    "action"?: string,"request_count"?: number,"user_id"?: string,"window_start"?: string
+                  }
+                  Relationships: [
+
+                  ]
                 },"recipe_dietary_tags": {
                   Row: {
                     "recipe_id": number,"tag_id": number
@@ -249,7 +263,10 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "create_ingredient":
+            "consume_provider_request_limit":
+{ Args: { "p_action": string }; Returns: boolean
+                           },
+"create_ingredient":
 { Args: { "p_aliases"?: Json,"p_name": string,"p_normalized_name": string }; Returns: number
                            },
 "create_recipe":

@@ -207,6 +207,7 @@ Status values: Not run, Pass, Fail, Blocked. Priority: High, Medium, Low.
 | TC-083 | FR-21 | Admin adds substitute | `POST /substitutes` | Substitute appears on recipes missing that ingredient | High |
 | TC-084 | FR-21 | Ingredient cannot substitute itself | Substitute with same ID on both sides | Status 400 | Medium |
 | TC-085 | FR-21 | Remove substitute | `DELETE /substitutes` | Mapping removed | Low |
+| TC-086 | FR-20, FR-21 | Admin opens catalog manager | `GET /admin/catalog` as admin_1 | CookMatch recipes and catalog values load; a normal user receives 403 | High |
 
 ### 5.8 End-to-end flows
 
@@ -244,6 +245,8 @@ Status values: Not run, Pass, Fail, Blocked. Priority: High, Medium, Low.
 | ST-7 | HTTPS only | Open the site over plain HTTP | Redirect to HTTPS or refusal |
 | ST-8 | Error messages | Trigger a 500 error | No stack trace or database details shown |
 | ST-9 | Login brute force | Repeated wrong passwords | Rate limit or lockout applies (if implemented) |
+| ST-10 | Provider request limit | With the provider mocked, make 31 Spoonacular searches or detail requests of the same type in one hour as one user | The first 30 may proceed; the next returns 429 without calling Spoonacular |
+| ST-11 | Browser security headers | Inspect app responses in production mode | CSP nonce, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, Permissions-Policy and HSTS are present |
 
 ### 6.3 Usability and compatibility (NFR-3, NFR-4, NFR-9)
 
