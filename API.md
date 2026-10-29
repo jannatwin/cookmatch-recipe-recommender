@@ -1,9 +1,8 @@
 # CookMatch API Reference
 
-REST API for CookMatch, a recipe recommendation system based on available ingredients.
-This reference matches the endpoints in the architecture and database design and the requirements in the SRS (FR-1 to FR-21).
+JSON API contract for CookMatch Route Handlers, where an endpoint is implemented. The primary application is Next.js App Router and may use Server Actions for internal form mutations; do not add a separate Express API server. Authentication is Supabase Auth with cookie-based SSR sessions. This endpoint reference describes app-level behavior, not a custom JWT implementation.
 
-> Base URL, token lifetime and page sizes below are proposed defaults. Change them to match the final implementation.
+> The base URL and payloads below are proposed app-level contracts. Reconcile endpoint shapes with actual Route Handlers during implementation. See `implementation.md` for the selected stack.
 
 ---
 
@@ -11,22 +10,22 @@ This reference matches the endpoints in the architecture and database design and
 
 | Item | Value |
 | --- | --- |
-| Base URL | `https://api.cookmatch.example/v1` |
+| Base URL | Same-origin Next.js routes, for example `https://cookmatch.example/api/v1` |
 | Format | JSON (`Content-Type: application/json`) for requests and responses |
 | Transport | HTTPS only |
-| Authentication | `Authorization: Bearer <token>` header (JWT) |
+| Authentication | Supabase Auth session cookies for same-origin browser requests; server validates the session |
 | Roles | `user`, `admin` |
 | Dates | ISO 8601 (`2026-10-20`) |
-| IDs | Integers |
+| IDs | Catalog IDs may be numeric; Supabase Auth user IDs are UUIDs |
 | Naming | `camelCase` in JSON fields |
 
 ### 1.1 Access levels
 
 | Level | Meaning |
 | --- | --- |
-| Public | No token needed |
-| User | Valid token of a registered user (admins also pass) |
-| Admin | Valid token with role `admin` |
+| Public | No authenticated Supabase session required |
+| User | Valid Supabase Auth session (admins also pass) |
+| Admin | Valid session and server-verified `admin` profile role |
 
 ### 1.2 Standard error format
 
@@ -52,11 +51,12 @@ Every error uses the same body:
 | 201 | Created | Resource created |
 | 204 | No Content | Successful delete |
 | 400 | Bad Request | Validation failed, malformed input |
-| 401 | Unauthorized | Missing, invalid or expired token; wrong credentials |
+| 401 | Unauthorized | Missing/invalid session or wrong credentials |
 | 403 | Forbidden | Token is valid but role is not allowed |
 | 404 | Not Found | Resource does not exist |
 | 409 | Conflict | Duplicate email, ingredient or alias |
 | 422 | Unprocessable Entity | Unknown ingredient names in a pantry request |
+| 429 | Too Many Requests | Authentication or provider request is rate limited |
 | 500 | Server Error | Unexpected failure |
 
 ### 1.4 Error codes
@@ -65,7 +65,8 @@ Every error uses the same body:
 | --- | --- | --- |
 | `VALIDATION_ERROR` | 400 | One or more fields are invalid |
 | `INVALID_CREDENTIALS` | 401 | Email or password is wrong |
-| `TOKEN_INVALID` | 401 | Token missing, malformed or expired |
+| `TOKEN_INVALID` | 401 | Supabase session missing, invalid or expired |
+| `RATE_LIMITED` | 429 | Request limit reached; retry after a delay |
 | `FORBIDDEN` | 403 | Role not allowed for this endpoint |
 | `NOT_FOUND` | 404 | Resource does not exist |
 | `DUPLICATE` | 409 | Value already exists (for example email) |
@@ -97,7 +98,7 @@ Paginated responses include:
 | # | Method | Endpoint | Purpose | Access | Requirement |
 | --- | --- | --- | --- | --- | --- |
 | 1 | POST | `/auth/register` | Create an account | Public | FR-1 |
-| 2 | POST | `/auth/login` | Log in, receive a token | Public | FR-2, FR-3 |
+| 2 | POST | `/auth/login` | Log in and establish a Supabase session | Public | FR-2, FR-3 |
 | 3 | POST | `/auth/logout` | Log out | User | FR-2 |
 | 4 | GET | `/ingredients/search` | Ingredient name suggestions | User | FR-4, FR-7 |
 | 5 | GET | `/pantry` | Get the user's pantry | User | FR-5 |
@@ -116,10 +117,14 @@ Paginated responses include:
 | 18 | POST | `/ingredients/{id}/aliases` | Add an alias | Admin | FR-21 |
 | 19 | POST | `/substitutes` | Create a substitute mapping | Admin | FR-21 |
 | 20 | DELETE | `/substitutes` | Remove a substitute mapping | Admin | FR-21 |
+| 21 | GET | `/providers/recipes?source=...` | Search a selected provider using the current pantry | User | FR-8 to FR-14 |
+| 22 | GET | `/providers/recipes/{source}/{id}` | Load selected provider recipe details | User | FR-17, FR-18 |
 
 ---
 
 ## 3. Authentication
+
+For the browser application, register/login/logout are implemented through Supabase Auth using the configured SSR cookie flow. The `/auth/*` shapes below describe the logical app contract only; do not create custom password verification or issue a CookMatch JWT. If a non-browser API client is added later, document its supported Supabase access-token flow explicitly.
 
 ### 3.1 Register
 
@@ -147,7 +152,7 @@ Response `201 Created`:
 
 ```json
 {
-  "userId": 12,
+  "userId": "8d5d0f54-0e1e-4bba-a26e-9a3c9d8c19b2",
   "name": "Saske",
   "email": "saske@example.com",
   "role": "user",
@@ -170,15 +175,12 @@ Request body:
 }
 ```
 
-Response `200 OK`:
+Response `200 OK` (logical app response; the browser session is established by Supabase Auth and stored in a secure cookie, not returned as an app-managed bearer token):
 
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "tokenType": "Bearer",
-  "expiresIn": 3600,
   "user": {
-    "userId": 12,
+    "userId": "8d5d0f54-0e1e-4bba-a26e-9a3c9d8c19b2",
     "name": "Saske",
     "role": "user"
   }
@@ -191,7 +193,7 @@ Errors: `400 VALIDATION_ERROR`, `401 INVALID_CREDENTIALS` (the message never say
 
 `POST /auth/logout`  ·  User
 
-Ends the session. The client must also discard the token.
+Ends the Supabase Auth session and clears the session cookie.
 
 Response `204 No Content`.
 
@@ -622,43 +624,59 @@ Response `204 No Content`.
 
 Errors: `403 FORBIDDEN`, `404 NOT_FOUND`.
 
+## 8. External recipe providers
+
+### 8.1 Search a provider
+
+`GET /providers/recipes?source=themealdb&limit=5` · User
+
+The user must have a non-empty pantry. `source` is `themealdb` or `spoonacular`; `limit` is 1–10 (TheMealDB is capped at 5 because the free V1 API searches ingredients individually). The request is performed server-side and results are not persisted to the CookMatch catalog. Results include an ingredient match score calculated against the user's canonical pantry and provider attribution.
+
+Errors: `400 VALIDATION_ERROR`, `401 TOKEN_INVALID`, `429 RATE_LIMITED`, `502` when the provider is unavailable, or `503` when a provider key is not configured.
+
+### 8.2 Provider recipe details
+
+`GET /providers/recipes/{source}/{id}` · User
+
+Loads one recipe from its selected provider, maps ingredients to the CookMatch catalog where possible, marks pantry matches and includes source attribution. Provider terms, API quotas and image/data use restrictions still apply.
+
 ---
 
-## 8. Typical Client Flow
+## 9. Typical Client Flow
 
 The calls below follow the system's main activity flow.
 
 | Step | User action | Call |
 | --- | --- | --- |
 | 1 | Register | `POST /auth/register` |
-| 2 | Log in | `POST /auth/login` (store the token) |
+| 2 | Log in | Supabase Auth sign-in (session stored using the configured secure cookie flow) |
 | 3 | Type ingredient names | `GET /ingredients/search?q=...` |
 | 4 | Submit available ingredients | `PUT /pantry` |
 | 5 | View recommended recipes | `GET /recommendations` |
 | 6 | Apply filters | `GET /recommendations?cuisine=...&maxTime=...&diet=...` |
 | 7 | Select a recipe | `GET /recipes/{id}` |
 | 8 | Start cooking | Client shows the `steps` from step 7 |
-| 9 | Log out | `POST /auth/logout` |
+| 9 | Log out | Supabase Auth sign-out (clear the session cookie) |
 
 ---
 
-## 9. Security Notes
+## 10. Security Notes
 
 | Concern | Rule |
 | --- | --- |
 | Transport | HTTPS only; reject plain HTTP |
-| Passwords | Salted hash (bcrypt); never returned in any response |
-| Tokens | JWT with a short lifetime (proposed: 1 hour); invalid or expired tokens return `401 TOKEN_INVALID` |
-| Authorization | Role checked on every admin endpoint; users can only read and change their own pantry |
+| Passwords | Managed by Supabase Auth; never stored or returned by CookMatch tables |
+| Sessions | Supabase Auth cookie-based SSR session; do not implement a parallel app JWT |
+| Authorization | Role checked in server code and enforced by RLS; users can only read/change their own pantry |
 | Input | Validate and sanitize every field; use parameterized queries only |
 | Errors | Do not reveal internal details or stack traces in error messages |
 | Rate limiting | Proposed: limit login attempts to slow down password guessing |
 
 ---
 
-## 10. Open Decisions for the Team
+## 11. Open Decisions for the Team
 
-- Token lifetime and whether to add a refresh token.
+- Supabase Auth session duration and refresh behavior should use the configured Supabase Auth policy.
 - Length of the "expiring soon" window (currently proposed as 3 days) and the weight of the expiry boost in ranking.
 - Whether the `PUT /pantry` replace-all call is enough or the app should also use the single-item endpoints.
 - Whether to add password reset and email verification (not in the current requirements).

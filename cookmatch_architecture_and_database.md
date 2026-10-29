@@ -3,7 +3,7 @@
 A smart recipe recommendation system based on available ingredients.
 This document describes the system architecture and the database design that support the requirements in the CookMatch Software Requirements Specification.
 
-> The technology stack below is a proposal. Replace any item the team decides to change; the structure stays the same.
+> Selected stack: strict TypeScript, Next.js App Router, Tailwind CSS, Supabase PostgreSQL/Auth, and Vercel. See `implementation.md` for implementation instructions. Older schema/query examples are illustrative and must follow the Supabase UUID/RLS changes below.
 
 ---
 
@@ -28,7 +28,7 @@ flowchart TB
         UI[CookMatch Web UI]
     end
 
-    subgraph BE[Application Layer - REST API]
+    subgraph BE[Next.js Application Layer]
         AUTH[Auth Module]
         PANTRY[Pantry Module]
         REC[Recommendation Module]
@@ -65,11 +65,13 @@ flowchart TB
 
 | Part | Proposed choice | Reason |
 | --- | --- | --- |
-| Frontend | React with CSS (claymorphism styling) | Component-based, good for card and chip interfaces |
-| Backend | Node.js with Express (REST API) | Simple, widely taught, JSON native |
-| Database | PostgreSQL | Strong relational model, supports the matching query efficiently |
-| Authentication | JWT with bcrypt password hashing | Stateless sessions, salted password hashes (NFR-6) |
-| Hosting | Any cloud or university server with HTTPS | Meets NFR-9 and the HTTPS requirement |
+| Language | TypeScript, strict mode | Shared typed domain models and safer server/client boundaries |
+| Framework | Next.js App Router | Full-stack React app with Server Components, Server Actions and Route Handlers |
+| Styling | Tailwind CSS | Utility-first styling; use tokens/components defined in `Design.md` |
+| Database | Supabase PostgreSQL | Relational model with migrations, constraints and Row Level Security |
+| Authentication | Supabase Auth with `@supabase/ssr` | Cookie-based sessions for Next.js; no custom password table/JWT issuer |
+| Hosting | Vercel (app) and Supabase (data/Auth) | Integrated deployment and managed Postgres |
+| Recipe data | TheMealDB and Spoonacular APIs | Server-only adapters; comply with provider terms, limits and attribution |
 
 ### 1.3 Module responsibilities
 
@@ -133,8 +135,8 @@ sequenceDiagram
 
 | Method | Endpoint | Purpose | Access |
 | --- | --- | --- | --- |
-| POST | /auth/register | Create an account | Public |
-| POST | /auth/login | Log in and receive a token | Public |
+| POST | /auth/register | Create an account through Supabase Auth | Public |
+| POST | /auth/login | Sign in through Supabase Auth and establish a cookie session | Public |
 | GET | /ingredients/search?q= | Suggest ingredient names while typing | User |
 | GET | /pantry | Get the current user's pantry | User |
 | PUT | /pantry | Replace or update pantry items | User |
@@ -171,9 +173,9 @@ The warning window for an expiring ingredient (for example 3 days) and the exact
 
 | Concern | Approach |
 | --- | --- |
-| Passwords | Salted hash (bcrypt); never stored in plain text |
-| Sessions | Short-lived JWT sent in the Authorization header |
-| Access control | Role check on every admin endpoint |
+| Passwords | Managed and hashed by Supabase Auth; never copied to app tables |
+| Sessions | Supabase Auth cookie-based SSR sessions |
+| Access control | Server role checks and PostgreSQL RLS on every protected operation |
 | Injection | Parameterized queries only; sanitize all user input |
 | Transport | HTTPS for all traffic |
 
@@ -181,21 +183,13 @@ The warning window for an expiring ingredient (for example 3 days) and the exact
 
 ```
 cookmatch/
-  client/                 # React web app
-    src/
-      pages/              # Login, Pantry, Recommendations, RecipeDetails
-      components/         # RecipeCard, IngredientChip, FilterPills, ScoreBadge
-      api/                # API call helpers
-  server/
-    src/
-      routes/             # auth, pantry, recommendations, recipes, admin
-      controllers/
-      services/
-        normalizer.js     # ingredient name matching
-        matcher.js        # match score and ranking
-        substitutes.js    # substitute lookup
-      middleware/         # auth, role check, validation
-      db/                 # connection, migrations, seed data
+  src/app/                # Next.js App Router pages and Route Handlers
+  src/components/         # Tailwind UI components
+  src/features/           # auth, pantry, recommendations, recipes, admin
+  src/server/             # TypeScript domain services and provider adapters
+  src/lib/supabase/       # Supabase browser/server clients
+  supabase/migrations/    # SQL schema, constraints and RLS policies
+  supabase/seed.sql       # local/demo data
   docs/
 ```
 
@@ -203,13 +197,13 @@ cookmatch/
 
 ## 2. Database Design
 
-A relational design in PostgreSQL. Names use snake_case.
+A relational design in Supabase PostgreSQL. Names use snake_case. Supabase Auth owns credentials and user identities; application-owned profile and pantry rows reference `auth.users.id` as UUID. Catalog IDs may remain generated integers. Apply schema changes with migrations and enable RLS as described in `implementation.md`.
 
 ### 2.1 Entity relationship diagram
 
 ```mermaid
 erDiagram
-    USERS ||--o{ PANTRY_ITEMS : has
+    PROFILES ||--o{ PANTRY_ITEMS : has
     INGREDIENTS ||--o{ PANTRY_ITEMS : "stored as"
     INGREDIENTS ||--o{ INGREDIENT_ALIASES : "known as"
     INGREDIENTS ||--o{ RECIPE_INGREDIENTS : "used in"
@@ -221,11 +215,9 @@ erDiagram
     INGREDIENTS ||--o{ SUBSTITUTES : "original"
     INGREDIENTS ||--o{ SUBSTITUTES : "replacement"
 
-    USERS {
-        int user_id PK
+    PROFILES {
+        uuid id PK, FK
         string name
-        string email UK
-        string password_hash
         string role
         timestamp created_at
     }
@@ -239,7 +231,7 @@ erDiagram
         string alias UK
     }
     PANTRY_ITEMS {
-        int user_id PK, FK
+        uuid user_id PK, FK
         int ingredient_id PK, FK
         date expiry_date
         timestamp added_at
@@ -286,7 +278,7 @@ erDiagram
 
 | Table | Purpose | Key columns |
 | --- | --- | --- |
-| users | Registered users and admins | email (unique), password_hash, role |
+| profiles | App profile and role linked to Supabase Auth | `id` references `auth.users.id`, role |
 | ingredients | Master list of ingredients | name (unique) |
 | ingredient_aliases | Alternative and regional names for an ingredient | alias (unique), ingredient_id |
 | pantry_items | Ingredients a user currently has, with optional expiry | (user_id, ingredient_id), expiry_date |
@@ -301,14 +293,12 @@ erDiagram
 ### 2.3 SQL schema
 
 ```sql
-CREATE TABLE users (
-    user_id        SERIAL PRIMARY KEY,
+CREATE TABLE profiles (
+    id             UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     name           VARCHAR(100) NOT NULL,
-    email          VARCHAR(255) NOT NULL UNIQUE,
-    password_hash  VARCHAR(255) NOT NULL,
-    role           VARCHAR(10)  NOT NULL DEFAULT 'user'
+    role           VARCHAR(10) NOT NULL DEFAULT 'user'
                    CHECK (role IN ('user', 'admin')),
-    created_at     TIMESTAMP    NOT NULL DEFAULT NOW()
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE ingredients (
@@ -323,7 +313,7 @@ CREATE TABLE ingredient_aliases (
 );
 
 CREATE TABLE pantry_items (
-    user_id        INT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    user_id        UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     ingredient_id  INT NOT NULL REFERENCES ingredients(ingredient_id) ON DELETE CASCADE,
     expiry_date    DATE,
     added_at       TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -394,7 +384,7 @@ CREATE INDEX idx_aliases_ingredient            ON ingredient_aliases (ingredient
 
 ### 2.5 Core matching query
 
-Ranks every recipe for one user (`:user_id`), with optional filters applied in the `WHERE` clause. A recipe's missing count is used to mark "almost achievable" (1 or 2 missing).
+Ranks every recipe for one Supabase user (`:user_id` UUID), with optional filters applied in the `WHERE` clause. A recipe's missing count is used to mark "almost achievable" (1 or 2 missing). The SQL is illustrative; apply filters before pagination and use a deterministic final tie-breaker.
 
 ```sql
 SELECT

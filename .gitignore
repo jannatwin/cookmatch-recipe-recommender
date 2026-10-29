@@ -1,0 +1,14 @@
+node_modules/
+.next/
+out/
+build/
+coverage/
+.vercel/
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+supabase/.temp/
+
+# Supabase local CLI state
+supabase/.branches/
