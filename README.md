@@ -46,6 +46,8 @@ Prerequisites: Node.js 20.9 or later, npm, Docker Desktop/Engine for local Supab
 4. Start Next.js with `npm run dev` and open `http://localhost:3000`.
 5. Check `http://localhost:3000/api/v1/health` for the backend health route.
 
+Run the database tests (recommendation ranking and pantry isolation, in `supabase/tests/`) with `npx supabase test db` while the local stack is running. GitHub Actions (`.github/workflows/ci.yml`) runs lint, typecheck, build and these tests on every push to `main` and every pull request.
+
 Stop the local stack with `npm run supabase:stop`. Never commit `.env.local`, Supabase secret keys, or provider API keys.
 
 To regenerate Supabase TypeScript types after changing the schema, run `npm run db:types`. To make a local account an admin, sign up through the app and update that account's `profiles.role` with the local Supabase SQL editor; public registration never grants admin access.
