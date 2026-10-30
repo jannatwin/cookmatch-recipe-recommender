@@ -98,7 +98,8 @@ export const spoonacularProvider: RecipeProvider = {
       usedIngredientNames: [],
       missingIngredientNames: [],
       sourceUrl: recipe.sourceUrl ?? null,
-      description: recipe.summary ?? null,
+      // Spoonacular summaries contain HTML markup; the UI renders plain text.
+      description: recipe.summary?.replace(/<[^>]*>/g, "") ?? null,
       cuisine: recipe.cuisines[0] ?? null,
       cookingTimeMin: recipe.readyInMinutes ?? null,
       dietaryTags: recipe.diets,
