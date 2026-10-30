@@ -6,15 +6,18 @@ export async function POST(request: Request) {
   try {
     const input = await parseJson(request, registerSchema);
     const supabase = await createClient();
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ||
+      (process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+        : process.env.NODE_ENV === "production"
+          ? "https://cookmatch-recipe-recommender.vercel.app"
+          : "http://localhost:3000");
     const { data, error } = await supabase.auth.signUp({
       email: input.email,
       password: input.password,
       options: {
         data: { display_name: input.name },
-        emailRedirectTo: new URL(
-          "/auth/callback",
-          process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-        ).toString(),
+        emailRedirectTo: new URL("/auth/callback", appUrl).toString(),
       },
     });
 
