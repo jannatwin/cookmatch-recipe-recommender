@@ -32,6 +32,7 @@ src/proxy.ts              # Supabase cookie refresh and request security headers
 src/server/               # Domain services and server-only provider adapters
 supabase/migrations/      # Versioned PostgreSQL schema and RLS policies
 supabase/seed.sql         # Local/demo seed data only
+supabase/seeds/           # Optional catalog data, loaded separately
 ```
 
 Follow the existing repository layout if implementation has already established one; do not create duplicate `client/` and `server/` applications.
@@ -47,6 +48,8 @@ Prerequisites: Node.js 20.9 or later, npm, Docker Desktop/Engine for local Supab
 5. Check `http://localhost:3000/api/v1/health` for the backend health route.
 
 Stop the local stack with `npm run supabase:stop`. Never commit `.env.local`, Supabase secret keys, or provider API keys.
+
+`supabase/seeds/leftover_recipes.sql` adds 100 CookMatch-owned recipes built around food that often goes to waste. It is not part of `npm run db:reset`, so the fixed test fixture in `Testing & QA.md` stays unchanged. To load it, run the file in the Supabase SQL editor after the migrations; it is safe to run more than once.
 
 To regenerate Supabase TypeScript types after changing the schema, run `npm run db:types`. To make a local account an admin, sign up through the app and update that account's `profiles.role` with the local Supabase SQL editor; public registration never grants admin access.
 

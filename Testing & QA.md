@@ -61,7 +61,7 @@ Testing and quality assurance plan for CookMatch, built with TypeScript, Next.js
 
 ## 4. Test Data
 
-Use this fixed deterministic CookMatch fixture so expected results can be calculated by hand. Keep it separate from imported TheMealDB/Spoonacular data. Automated checks must mock provider responses and must not consume paid API quota.
+Use this fixed deterministic CookMatch fixture so expected results can be calculated by hand. Keep it separate from imported TheMealDB/Spoonacular data and from the optional `supabase/seeds/leftover_recipes.sql` catalog; expected results below assume neither is loaded. Automated checks must mock provider responses and must not consume paid API quota.
 
 **Ingredients:** Egg, Onion, Tomato, Rice, Butter, Oil, Salt, Chili, Garlic, Chicken
 
