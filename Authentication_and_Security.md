@@ -13,6 +13,7 @@ Protect account credentials and sessions, personal profile information, user pan
 - Use the current `@supabase/ssr` integration so sessions are carried in secure cookies across Server Components, Server Actions and Route Handlers.
 - Validate the current user server-side before returning private data or performing mutations. Do not trust user IDs, roles or session claims supplied in request bodies.
 - Configure secure cookie flags in production, safe auth callback URLs and explicit redirect allow-lists. Do not redirect to arbitrary user-provided URLs.
+- Email-confirmation links use `NEXT_PUBLIC_APP_URL`, then Vercel's `VERCEL_PROJECT_PRODUCTION_URL`; keep the production callback URL (`https://<production-domain>/auth/callback`) in Supabase Auth's allowed redirect URLs. Local development falls back to `http://localhost:3000`.
 - Logout must clear/revoke the Supabase session using the supported Auth flow and clear the browser session state.
 - Return non-enumerating login errors so users cannot determine whether an email exists.
 
