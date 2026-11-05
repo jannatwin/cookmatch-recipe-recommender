@@ -47,6 +47,8 @@ Prerequisites: Node.js 20.9 or later, npm, Docker Desktop/Engine for local Supab
 4. Start Next.js with `npm run dev` and open `http://localhost:3000`.
 5. Check `http://localhost:3000/api/v1/health` for the backend health route.
 
+Run the database tests (recommendation ranking and pantry isolation, in `supabase/tests/`) with `npx supabase test db` while the local stack is running. GitHub Actions (`.github/workflows/ci.yml`) runs lint, typecheck, build and these tests on every push to `main` and every pull request.
+
 Stop the local stack with `npm run supabase:stop`. Never commit `.env.local`, Supabase secret keys, or provider API keys.
 
 `supabase/seeds/leftover_recipes.sql` adds 100 CookMatch-owned recipes built around food that often goes to waste. It is not part of `npm run db:reset`, so the fixed test fixture in `Testing & QA.md` stays unchanged. To load it, run the file in the Supabase SQL editor after the migrations; it is safe to run more than once.
