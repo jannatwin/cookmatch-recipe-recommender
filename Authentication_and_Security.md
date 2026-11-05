@@ -47,7 +47,7 @@ Never expose a Supabase secret key to client code. It bypasses RLS; prefer user-
 - Use Supabase query APIs or parameterized SQL/RPCs. Never concatenate user values into SQL.
 - Render untrusted recipe/provider text as text. Avoid `dangerouslySetInnerHTML`; if rich text becomes necessary, sanitize with a maintained allow-list sanitizer.
 - Apply request size limits and rate limits to sign-in, ingredient search and metered provider calls. Spoonacular search and detail calls are capped at 30 per user per hour for each action in PostgreSQL; Supabase Auth also enforces its configured authentication limits.
-- Add secure response headers and a nonce-based Content Security Policy compatible with provider images and Supabase requests. Production responses use HSTS; the CSP permits `https:` images/connections so provider and Supabase hosts can vary by environment.
+- Add secure response headers and a nonce-based Content Security Policy compatible with provider images and Supabase requests. Production responses use HSTS; the CSP permits `https:` images/connections so provider and Supabase hosts can vary by environment. Next.js can only apply a nonce during server rendering, so the root layout calls `connection()` to keep every page dynamically rendered; a prerendered page would have all of its scripts blocked in production. Avoid inline `<style>` tags and server-rendered `style` attributes, which this CSP also blocks.
 - Configure auth redirect URLs, CORS/origins and Supabase allowed URLs explicitly for local, preview and production environments.
 
 ## 6. Operational checks
