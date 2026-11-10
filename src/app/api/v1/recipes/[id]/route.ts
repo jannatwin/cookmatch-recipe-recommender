@@ -2,6 +2,7 @@ import { ApiError, apiErrorResponse } from "@/lib/api/errors";
 import { requireAdmin, requireUser } from "@/lib/auth/require-user";
 import { parseJson } from "@/lib/validation/api";
 import { recipeInputSchema, toRecipeRpcInput } from "@/lib/validation/recipe";
+import { matchScore } from "@/server/services/matching";
 import { z } from "zod";
 
 type Context = { params: Promise<{ id: string }> };
@@ -16,8 +17,7 @@ export async function GET(_request: Request, context: Context) {
     const { data: recipe, error: recipeError } = await supabase
       .from("recipes")
       .select("id,title,description,cuisine_id,cooking_time_min,image_url,source_url,attribution")
-      .eq("id", recipeId)
-      .eq("is_published", true)
+      .eq("id", recipeId) // RLS hides drafts from non-admins, so admins can preview them here.
       .maybeSingle();
     if (recipeError) throw new ApiError(500, "SERVER_ERROR", "Could not load recipe");
     if (!recipe) throw new ApiError(404, "NOT_FOUND", "Recipe was not found");
@@ -93,7 +93,7 @@ export async function GET(_request: Request, context: Context) {
       dietaryTags: dietaryTags.data.map((tag) => tag.name),
       ingredients: recipeIngredients,
       steps: steps.data.map((step) => ({ stepNumber: step.step_number, instruction: step.instruction })),
-      matchScore: requiredCount ? Math.round((haveCount / requiredCount) * 1000) / 10 : 0,
+      matchScore: matchScore(haveCount, requiredCount),
       missingCount: requiredCount - haveCount,
     });
   } catch (error) {

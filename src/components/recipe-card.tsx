@@ -49,7 +49,7 @@ export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
             <span className={`rounded-full px-3 py-1 ${recipe.missingCount ? "bg-peach" : "bg-[#e8f6eb]"}`}>{recipe.missingCount ? `Missing ${recipe.missingCount}` : "All ingredients"}</span>
           </div>
           {recipe.missingIngredients.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">
-            {recipe.missingIngredients.slice(0, 3).map((item) => <span key={`${item.ingredientId ?? item.name}-${item.name}`} className="rounded-full bg-[#fff0ed] px-2.5 py-1 text-xs font-bold text-[#793d32]">{item.name}</span>)}
+            {recipe.missingIngredients.slice(0, 3).map((item) => <span key={`${item.ingredientId ?? item.name}-${item.name}`} className="rounded-full bg-[#fff0ed] px-2.5 py-1 text-xs font-bold text-[#793d32]">{item.name}{item.substitutes?.[0] && <span className="font-semibold text-[#5f516f]"> · or use {item.substitutes[0].name}</span>}</span>)}
             {recipe.missingIngredients.length > 3 && <span className="px-1 py-1 text-xs font-bold text-[#765b4d]">+{recipe.missingIngredients.length - 3} more</span>}
           </div>}
           {recipe.expiringCount ? <p className="mt-3 text-xs font-bold text-[#765b4d]">◷ Uses {recipe.expiringCount} ingredient{recipe.expiringCount === 1 ? "" : "s"} expiring soon</p> : null}

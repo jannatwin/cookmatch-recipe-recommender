@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/database";
 import { getPublicSupabaseEnv } from "@/lib/env";
 
+const protectedPrefixes = ["/pantry", "/recipes", "/admin", "/provider-recipes"];
+
 export async function proxy(request: NextRequest) {
   const nonce = btoa(crypto.randomUUID());
   const isDev = process.env.NODE_ENV === "development";
@@ -42,8 +44,22 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  // Refresh the auth cookie when needed. Do not use this as the only authorization check.
-  await supabase.auth.getClaims();
+  // Refresh the auth cookie when needed. Do not use this as the only authorization check:
+  // the redirects below are for navigation only; API routes and RLS enforce access.
+  const { data } = await supabase.auth.getClaims();
+  const signedIn = Boolean(data?.claims);
+  const path = request.nextUrl.pathname;
+  const needsAuth = protectedPrefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+  const authPage = path === "/login" || path === "/register";
+  if ((needsAuth && !signedIn) || (authPage && signedIn)) {
+    const target = request.nextUrl.clone();
+    target.search = "";
+    target.pathname = needsAuth ? "/login" : "/pantry";
+    if (needsAuth) target.searchParams.set("next", `${path}${request.nextUrl.search}`);
+    const redirect = NextResponse.redirect(target);
+    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+    return redirect;
+  }
   response.headers.set("Content-Security-Policy", csp);
   return response;
 }

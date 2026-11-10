@@ -5,6 +5,7 @@ import { listPantry } from "@/server/services/pantry";
 import { normalizeIngredientName, resolveIngredientNames } from "@/server/services/ingredients";
 import { spoonacularProvider } from "@/server/providers/spoonacular";
 import { theMealDbProvider } from "@/server/providers/themealdb";
+import { isAlmostAchievable, matchScore } from "@/server/services/matching";
 import { ProviderError } from "@/server/providers/contracts";
 import { enforceSpoonacularLimit } from "@/server/providers/rate-limit";
 
@@ -73,11 +74,11 @@ export async function GET(request: Request) {
         cuisine: detail?.cuisine ?? null,
         cookingTimeMin: detail?.cookingTimeMin ?? null,
         dietaryTags: detail?.dietaryTags ?? [],
-        matchScore: required.size ? Math.round((have.length / required.size) * 1000) / 10 : 0,
+        matchScore: matchScore(have.length, required.size),
         requiredCount: required.size,
         haveCount: have.length,
         missingCount: missing.length,
-        almostAchievable: missing.length === 1 || missing.length === 2,
+        almostAchievable: isAlmostAchievable(missing.length),
         missingIngredients: missing.map((ingredient) => ({
           ingredientId: ingredient.ingredientId,
           name: ingredient.name,

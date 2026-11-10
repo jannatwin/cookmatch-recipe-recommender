@@ -27,7 +27,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       .catch((cause: unknown) => {
         if (!active) return;
         if (cause instanceof Error && cause.message === "Sign in is required") {
-          router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+          // Clear a stale cookie first, otherwise proxy.ts would bounce /login back here.
+          void apiRequest<void>("/api/v1/auth/logout", { method: "POST" }).catch(() => {})
+            .then(() => router.replace(`/login?next=${encodeURIComponent(pathname)}`));
         } else {
           setError(cause instanceof Error ? cause.message : "Could not verify your session.");
         }

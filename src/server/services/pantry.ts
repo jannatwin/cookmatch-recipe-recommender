@@ -1,6 +1,7 @@
 import { ApiError } from "@/lib/api/errors";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/types/database";
+import { isExpiringSoon } from "./matching";
 
 export async function listPantry(supabase: SupabaseClient<Database>, userId: string) {
   const { data: items, error } = await supabase
@@ -20,13 +21,11 @@ export async function listPantry(supabase: SupabaseClient<Database>, userId: str
   if (ingredientError) throw new ApiError(500, "SERVER_ERROR", "Could not load pantry ingredients");
 
   const byId = new Map(ingredients.map((ingredient) => [ingredient.id, ingredient.name]));
-  const warningLimit = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const today = new Date().toISOString().slice(0, 10);
   return items.map((item) => ({
     ingredientId: item.ingredient_id,
     name: byId.get(item.ingredient_id) ?? "Unknown ingredient",
     expiryDate: item.expiry_date,
-    expiringSoon: Boolean(item.expiry_date && item.expiry_date >= today && item.expiry_date <= warningLimit),
+    expiringSoon: isExpiringSoon(item.expiry_date),
   }));
 }
 

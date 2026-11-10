@@ -50,10 +50,12 @@ export function RecipesWorkspace() {
   }, [filters]);
 
   useEffect(() => {
+    let active = true; // ignore responses for filters that have since changed
     fetchRecipes(1)
-      .then((result) => { setRecipes(result.data); setPagination(result.pagination); setError(""); })
-      .catch((cause: unknown) => { setError(cause instanceof Error ? cause.message : "Could not load recipe matches."); setRecipes([]); setPagination({ page: 1, totalPages: 1, totalItems: 0 }); })
-      .finally(() => setLoading(false));
+      .then((result) => { if (active) { setRecipes(result.data); setPagination(result.pagination); setError(""); } })
+      .catch((cause: unknown) => { if (active) { setError(cause instanceof Error ? cause.message : "Could not load recipe matches."); setRecipes([]); setPagination({ page: 1, totalPages: 1, totalItems: 0 }); } })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [fetchRecipes]);
 
   function updateFilter(key: keyof Filters, value: string) {

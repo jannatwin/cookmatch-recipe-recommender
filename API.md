@@ -479,6 +479,8 @@ Response `200 OK`:
 
 Errors: `404 NOT_FOUND`.
 
+Administrators can also open unpublished recipes here to preview a draft; other users receive `404` for them.
+
 ### 6.2 List cuisines
 
 `GET /cuisines`  ·  User
@@ -634,6 +636,48 @@ Errors: `400 VALIDATION_ERROR` (an ingredient cannot substitute itself), `403 FO
 Response `204 No Content`.
 
 Errors: `403 FORBIDDEN`, `404 NOT_FOUND`.
+
+To change a note, remove the mapping and create it again.
+
+### 7.8 Rename an ingredient
+
+`PATCH /ingredients/{id}`  ·  Admin
+
+```json
+{ "name": "Fresh Coriander" }
+```
+
+Response `200 OK`: `{ "ingredientId": 44, "name": "Fresh Coriander" }`
+
+Errors: `400 VALIDATION_ERROR`, `403 FORBIDDEN`, `404 NOT_FOUND`, `409 DUPLICATE` (another ingredient or alias already uses the name).
+
+### 7.9 Delete an ingredient
+
+`DELETE /ingredients/{id}`  ·  Admin
+
+Response `204 No Content`. The ingredient's aliases, substitute mappings and pantry entries are removed with it.
+
+Errors: `403 FORBIDDEN`, `404 NOT_FOUND`, `409 IN_USE` (a recipe still requires the ingredient; edit or delete those recipes first).
+
+### 7.10 Remove an alias
+
+`DELETE /ingredients/{id}/aliases/{aliasId}`  ·  Admin
+
+Response `204 No Content`.
+
+Errors: `403 FORBIDDEN`, `404 NOT_FOUND`.
+
+### 7.11 Create a cuisine or dietary tag
+
+`POST /cuisines`  ·  Admin, and `POST /dietary-tags`  ·  Admin
+
+```json
+{ "name": "Thai" }
+```
+
+Response `201 Created`: `{ "cuisineId": 3, "name": "Thai" }` or `{ "tagId": 4, "name": "Gluten-free" }`
+
+Errors: `400 VALIDATION_ERROR`, `403 FORBIDDEN`, `409 DUPLICATE` (names are compared without regard to case).
 
 ## 8. External recipe providers
 
