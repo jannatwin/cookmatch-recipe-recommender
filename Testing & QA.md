@@ -47,6 +47,16 @@ Testing and quality assurance plan for CookMatch, built with TypeScript, Next.js
 
 ---
 
+### 2.1 Automated suites in this repository
+
+| Suite | Command | Covers |
+| --- | --- | --- |
+| Unit | `npm test` | `src/server/services/matching.ts`: match score, almost-achievable threshold, expiry window, name normalization |
+| Database (pgTAP) | `npx supabase test db` | `supabase/tests/`: ranking, filters, pagination, expiry boost, pantry isolation, admin-only writes, role escalation, anonymous access |
+| End to end (Playwright) | `npm run test:e2e` | `e2e/`: main user journey at desktop and 375 px widths, and the admin catalog journey |
+
+The database and end-to-end suites need the local Supabase stack (`npm run supabase:start`). The end-to-end suite builds the app itself and refuses to run unless `NEXT_PUBLIC_SUPABASE_URL` points at the local stack; see the README for the exact command. CI runs lint, typecheck, unit tests, build and the database suite.
+
 ## 3. Test Environment
 
 | Item | Setup |
@@ -109,7 +119,7 @@ Status values: Not run, Pass, Fail, Blocked. Priority: High, Medium, Low.
 | ID | Requirement | Test case | Steps | Expected result | Priority |
 | --- | --- | --- | --- | --- | --- |
 | TC-001 | FR-1 | Register with valid data | Send valid name, new email, password of 8+ characters | Account created, status 201, role is `user`, no password in response | High |
-| TC-002 | FR-1 | Register with duplicate email | Register again with the same email | Status 409 `DUPLICATE` | High |
+| TC-002 | FR-1 | Register with duplicate email | Register again with the same email | With email confirmation off (local): status 409 `DUPLICATE`. With confirmation on (production): Supabase Auth deliberately answers as for a new signup so that emails cannot be enumerated; no second account or session is created | High |
 | TC-003 | FR-1 | Register with invalid email | Send `abc` as email | Status 400 `VALIDATION_ERROR` | High |
 | TC-004 | FR-1 | Register with short password | Send a 5-character password | Status 400 `VALIDATION_ERROR` | Medium |
 | TC-005 | FR-2 | Log in with correct credentials | Sign in through the Supabase Auth flow | User session established securely; protected page loads | High |

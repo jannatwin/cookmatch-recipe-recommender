@@ -1,10 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "@/lib/api/errors";
 import type { Database } from "@/types/database";
+import { normalizeIngredientName } from "./matching";
 
-export function normalizeIngredientName(value: string) {
-  return value.normalize("NFKC").trim().toLocaleLowerCase("en-US").replace(/\s+/g, " ");
-}
+export { normalizeIngredientName };
 
 export async function resolveIngredient(
   supabase: SupabaseClient<Database>,

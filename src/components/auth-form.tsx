@@ -8,13 +8,13 @@ import { buttonPrimary, inputClass } from "@/components/ui";
 
 type Mode = "login" | "register";
 
-export function AuthForm({ mode }: { mode: Mode }) {
+export function AuthForm({ mode, initialError = "" }: { mode: Mode; initialError?: string }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(initialError);
   const [notice, setNotice] = useState("");
   const registering = mode === "register";
 

@@ -23,6 +23,7 @@ export function PantryWorkspace() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [selected, setSelected] = useState<Suggestion | null>(null);
   const [activeSuggestion, setActiveSuggestion] = useState(0);
+  const [noMatchFor, setNoMatchFor] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [dates, setDates] = useState<Record<number, string>>({});
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -57,12 +58,13 @@ export function PantryWorkspace() {
   useEffect(() => {
     const text = query.trim();
     if (text.length < 2 || selected?.name === text) return;
+    let active = true; // ignore responses that arrive after the query changed
     const timeout = window.setTimeout(() => {
       apiRequest<{ data: Suggestion[] }>(`/api/v1/ingredients/search?q=${encodeURIComponent(text)}&limit=8`)
-        .then(({ data }) => { setSuggestions(data); setActiveSuggestion(0); })
-        .catch(() => setSuggestions([]));
+        .then(({ data }) => { if (active) { setSuggestions(data); setActiveSuggestion(0); setNoMatchFor(data.length ? "" : text); } })
+        .catch(() => { if (active) setSuggestions([]); });
     }, 180);
-    return () => window.clearTimeout(timeout);
+    return () => { active = false; window.clearTimeout(timeout); };
   }, [query, selected]);
 
   function chooseSuggestion(suggestion: Suggestion) {
@@ -88,22 +90,23 @@ export function PantryWorkspace() {
 
   async function addItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selected) {
-      setError("Choose an ingredient from the suggestions so it matches your catalog.");
-      return;
-    }
+    const typed = query.trim();
+    if (!selected && !typed) return;
     setBusy(true);
     setError("");
     setNotice("");
     try {
-      await apiRequest<PantryItem>("/api/v1/pantry/items", {
+      // A typed name is resolved by the server against ingredient names and aliases.
+      const created = await apiRequest<PantryItem>("/api/v1/pantry/items", {
         method: "POST",
-        body: JSON.stringify({ ingredientId: selected.ingredientId, expiryDate: expiryDate || null }),
+        body: JSON.stringify({ ...(selected ? { ingredientId: selected.ingredientId } : { name: typed }), expiryDate: expiryDate || null }),
       });
       setQuery("");
       setSelected(null);
+      setSuggestions([]);
+      setNoMatchFor("");
       setExpiryDate("");
-      setNotice(`${selected.name} added to your pantry.`);
+      setNotice(`${created.name} added to your pantry.`);
       await loadPantry();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not add that ingredient.");
@@ -161,23 +164,25 @@ export function PantryWorkspace() {
           <div className="relative">
             <label htmlFor="ingredient-search" className="mb-2 block text-sm font-bold">Ingredient</label>
             <input
-              id="ingredient-search" value={query} onChange={(event) => { setQuery(event.target.value); setSelected(null); setSuggestions([]); }}
+              id="ingredient-search" value={query} onChange={(event) => { setQuery(event.target.value); setSelected(null); setSuggestions([]); setNoMatchFor(""); }}
               onKeyDown={handleSuggestionKeys} className={inputClass} placeholder="Try tomato or piyaj" autoComplete="off"
               role="combobox" aria-autocomplete="list" aria-expanded={suggestions.length > 0} aria-controls="ingredient-suggestions"
+              aria-activedescendant={suggestions[activeSuggestion] ? `ingredient-option-${suggestions[activeSuggestion].ingredientId}` : undefined}
             />
             {suggestions.length > 0 && <ul id="ingredient-suggestions" role="listbox" aria-label="Ingredient suggestions" className="absolute inset-x-0 top-full z-20 mt-2 max-h-64 overflow-auto rounded-2xl border border-[#dec7b8] bg-white p-2 shadow-xl">
-              {suggestions.map((suggestion, index) => <li key={suggestion.ingredientId} role="option" aria-selected={index === activeSuggestion}>
+              {suggestions.map((suggestion, index) => <li key={suggestion.ingredientId} id={`ingredient-option-${suggestion.ingredientId}`} role="option" aria-selected={index === activeSuggestion}>
                 <button type="button" onClick={() => chooseSuggestion(suggestion)} className={`flex min-h-12 w-full items-center justify-between rounded-xl px-3 text-left text-sm font-bold hover:bg-mint/60 focus-visible:outline-4 focus-visible:outline-cocoa ${index === activeSuggestion ? "bg-mint/50" : ""}`}>
                   <span>{suggestion.name}</span><span className="text-xs font-medium text-[#765b4d]">{suggestion.matchedAlias ? `alias: ${suggestion.matchedAlias}` : "ingredient"}</span>
                 </button>
               </li>)}
             </ul>}
+            {noMatchFor && <p role="status" className="mt-2 text-sm font-semibold text-[#8b493d]">No ingredient matches “{noMatchFor}”. Check the spelling or try another name.</p>}
           </div>
           <div>
             <label htmlFor="new-expiry" className="mb-2 block text-sm font-bold">Expiry date <span className="font-medium text-[#8b7061]">(optional)</span></label>
             <input id="new-expiry" type="date" min={today()} value={expiryDate} onChange={(event) => setExpiryDate(event.target.value)} className={inputClass} />
           </div>
-          <button type="submit" disabled={busy || !selected} className={buttonPrimary}>{busy ? "Adding…" : "Add to pantry"}</button>
+          <button type="submit" disabled={busy || !query.trim()} className={buttonPrimary}>{busy ? "Adding…" : "Add to pantry"}</button>
         </form>
       </Panel>
 
@@ -196,9 +201,10 @@ export function PantryWorkspace() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-3">
                     <span aria-hidden="true" className={`grid size-10 shrink-0 place-items-center rounded-2xl text-lg ${item.expiringSoon ? "bg-butter" : "bg-mint"}`}>✓</span>
-                    <div className="min-w-0"><h3 className="truncate font-extrabold">{item.name}</h3><p className="mt-0.5 text-xs text-[#765b4d]">{item.expiryDate ? `Expires ${prettyDate(item.expiryDate)}` : "No expiry date"}</p></div>
+                    <div className="min-w-0"><h3 className="truncate font-extrabold">{item.name}</h3><p className="mt-0.5 text-xs text-[#765b4d]">{item.expiryDate ? `${item.expiryDate < today() ? "Expired" : "Expires"} ${prettyDate(item.expiryDate)}` : "No expiry date"}</p></div>
                   </div>
                   {item.expiringSoon && <span className="shrink-0 rounded-full bg-butter px-2.5 py-1 text-[11px] font-extrabold">Use soon</span>}
+                  {item.expiryDate && item.expiryDate < today() && <span className="shrink-0 rounded-full bg-[#ffe1dd] px-2.5 py-1 text-[11px] font-extrabold text-[#7b2b22]">Expired</span>}
                 </div>
                 <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_auto] items-end gap-2">
                   <div><label htmlFor={`expiry-${item.ingredientId}`} className="mb-1.5 block text-xs font-bold">Expiry date</label><input id={`expiry-${item.ingredientId}`} type="date" min={today()} value={dates[item.ingredientId] ?? ""} onChange={(event) => setDates((current) => ({ ...current, [item.ingredientId]: event.target.value }))} className="min-h-11 w-full min-w-0 rounded-xl border border-[#d3b8a5] bg-white px-2 text-sm outline-none focus:ring-4 focus:ring-coral/20" /></div>

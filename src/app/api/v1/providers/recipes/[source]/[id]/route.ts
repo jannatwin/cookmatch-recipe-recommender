@@ -5,6 +5,7 @@ import { listPantry } from "@/server/services/pantry";
 import { normalizeIngredientName, resolveIngredientNames } from "@/server/services/ingredients";
 import { spoonacularProvider } from "@/server/providers/spoonacular";
 import { theMealDbProvider } from "@/server/providers/themealdb";
+import { matchScore } from "@/server/services/matching";
 import { ProviderError } from "@/server/providers/contracts";
 import { enforceSpoonacularLimit } from "@/server/providers/rate-limit";
 
@@ -58,7 +59,7 @@ export async function GET(_request: Request, context: Context) {
       dietaryTags: recipe.dietaryTags,
       ingredients,
       steps: recipe.steps.map((instruction, index) => ({ stepNumber: index + 1, instruction })),
-      matchScore: requiredKeys.size ? Math.round((haveCount / requiredKeys.size) * 1000) / 10 : 0,
+      matchScore: matchScore(haveCount, requiredKeys.size),
       missingCount: requiredKeys.size - haveCount,
     });
   } catch (error) {

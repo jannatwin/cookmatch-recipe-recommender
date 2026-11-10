@@ -1,5 +1,6 @@
 import { ApiError, apiErrorResponse } from "@/lib/api/errors";
 import { requireUser } from "@/lib/auth/require-user";
+import { EXPIRY_WARNING_DAYS } from "@/server/services/matching";
 import { recommendationQuerySchema } from "@/lib/validation/api";
 
 export async function GET(request: Request) {
@@ -45,7 +46,7 @@ export async function GET(request: Request) {
       p_diet_tag_id: dietTagId,
       p_almost_only: query.data.almostOnly === "true",
       p_min_score: query.data.minScore,
-      p_warning_days: 3,
+      p_warning_days: EXPIRY_WARNING_DAYS,
       p_page: query.data.page,
       p_limit: query.data.limit,
     });

@@ -47,7 +47,25 @@ Prerequisites: Node.js 20.9 or later, npm, Docker Desktop/Engine for local Supab
 4. Start Next.js with `npm run dev` and open `http://localhost:3000`.
 5. Check `http://localhost:3000/api/v1/health` for the backend health route.
 
-Run the database tests (recommendation ranking and pantry isolation, in `supabase/tests/`) with `npx supabase test db` while the local stack is running. GitHub Actions (`.github/workflows/ci.yml`) runs lint, typecheck, build and these tests on every push to `main` and every pull request.
+## Tests
+
+| Suite | Command |
+| --- | --- |
+| Unit tests for the matching rules | `npm test` |
+| Database tests (ranking, filters, access rules, in `supabase/tests/`) | `npx supabase test db` |
+| End-to-end browser tests (in `e2e/`) | see below |
+
+The database and end-to-end tests need the local Supabase stack running. The end-to-end tests create accounts and catalog rows, so they refuse to run against anything but local Supabase. Run `npx playwright install chromium` once, then pass the local values from `npx supabase status` on the command line (they override `.env.local` for that run only):
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 \
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<local publishable key> \
+SUPABASE_SECRET_KEY=<local secret key> \
+NEXT_PUBLIC_APP_URL=http://localhost:3100 \
+npm run test:e2e
+```
+
+This builds the app with the local settings; run `npm run build` again afterwards before using `npm run start` with your normal environment. GitHub Actions (`.github/workflows/ci.yml`) runs lint, typecheck, unit tests, build and the database tests on every push to `main` and every pull request.
 
 Stop the local stack with `npm run supabase:stop`. Never commit `.env.local`, Supabase secret keys, or provider API keys.
 

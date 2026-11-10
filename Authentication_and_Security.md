@@ -33,6 +33,8 @@ Enable RLS for every exposed table. Enforce ownership with `auth.uid() = user_id
 
 Never expose a Supabase secret key to client code. It bypasses RLS; prefer user-scoped clients for ordinary requests. If a trusted import task needs elevated access, verify the task authority first. Prefer the current publishable/secret key pair over legacy `anon`/`service_role` keys.
 
+`src/proxy.ts` redirects signed-out visitors away from `/pantry`, `/recipes`, `/admin` and `/provider-recipes` to `/login?next=…`, and signed-in visitors away from `/login` and `/register`. This is a navigation convenience only: every API route still calls `requireUser`/`requireAdmin`, and RLS is the final control. Sign-in attempts are rate-limited by Supabase Auth; the app adds no limiter of its own.
+
 ## 4. Data protection
 
 - Use HTTPS in production. Do not expose database ports publicly.
