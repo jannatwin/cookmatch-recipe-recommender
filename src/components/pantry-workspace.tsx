@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { apiRequest } from "@/lib/client-api";
 import { buttonPrimary, buttonSecondary, EmptyState, inputClass, PageHeading, Panel } from "@/components/ui";
 
@@ -21,7 +21,7 @@ export function PantryWorkspace() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [selected, setSelected] = useState<Suggestion | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [activeSuggestion, setActiveSuggestion] = useState(0);
   const [noMatchFor, setNoMatchFor] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
@@ -56,8 +56,9 @@ export function PantryWorkspace() {
   }, []);
 
   useEffect(() => {
-    const text = query.trim();
-    if (text.length < 2 || selected?.name === text) return;
+    // Several ingredients can be entered separated by commas; suggest for the one being typed.
+    const text = query.slice(query.lastIndexOf(",") + 1).trim();
+    if (text.length < 2) return;
     let active = true; // ignore responses that arrive after the query changed
     const timeout = window.setTimeout(() => {
       apiRequest<{ data: Suggestion[] }>(`/api/v1/ingredients/search?q=${encodeURIComponent(text)}&limit=8`)
@@ -65,12 +66,13 @@ export function PantryWorkspace() {
         .catch(() => { if (active) setSuggestions([]); });
     }, 180);
     return () => { active = false; window.clearTimeout(timeout); };
-  }, [query, selected]);
+  }, [query]);
 
   function chooseSuggestion(suggestion: Suggestion) {
-    setSelected(suggestion);
-    setQuery(suggestion.name);
+    setQuery((current) => `${current.slice(0, current.lastIndexOf(",") + 1)}${current.includes(",") ? " " : ""}${suggestion.name}, `);
     setSuggestions([]);
+    setNoMatchFor("");
+    inputRef.current?.focus();
   }
 
   function handleSuggestionKeys(event: KeyboardEvent<HTMLInputElement>) {
@@ -90,29 +92,38 @@ export function PantryWorkspace() {
 
   async function addItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const typed = query.trim();
-    if (!selected && !typed) return;
+    if (busy) return;
+    const names = [...new Set(query.split(",").map((name) => name.trim()).filter(Boolean))];
+    if (!names.length) return;
     setBusy(true);
     setError("");
     setNotice("");
-    try {
-      // A typed name is resolved by the server against ingredient names and aliases.
-      const created = await apiRequest<PantryItem>("/api/v1/pantry/items", {
-        method: "POST",
-        body: JSON.stringify({ ...(selected ? { ingredientId: selected.ingredientId } : { name: typed }), expiryDate: expiryDate || null }),
-      });
-      setQuery("");
-      setSelected(null);
-      setSuggestions([]);
-      setNoMatchFor("");
-      setExpiryDate("");
-      setNotice(`${created.name} added to your pantry.`);
-      await loadPantry();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not add that ingredient.");
-    } finally {
-      setBusy(false);
+    setSuggestions([]);
+    setNoMatchFor("");
+    setQuery(""); // clear now, so anything typed while the requests run is kept
+    const added: string[] = [];
+    const failed: Array<{ name: string; reason: string }> = [];
+    // Names are resolved by the server against ingredient names and aliases, one request each
+    // so a single unknown or duplicate name does not block the others.
+    for (const name of names) {
+      try {
+        const created = await apiRequest<PantryItem>("/api/v1/pantry/items", {
+          method: "POST", body: JSON.stringify({ name, expiryDate: expiryDate || null }),
+        });
+        added.push(created.name);
+      } catch (cause) {
+        failed.push({ name, reason: cause instanceof Error ? cause.message : "Could not add that ingredient." });
+      }
     }
+    if (added.length) {
+      setNotice(`${added.join(", ")} added to your pantry.`);
+      await loadPantry();
+    }
+    if (failed.length) setError(failed.length === 1 ? failed[0].reason : failed.map((item) => `${item.name}: ${item.reason}`).join(" · "));
+    else setExpiryDate("");
+    // Put back only what still needs fixing, ahead of anything typed in the meantime.
+    if (failed.length) setQuery((current) => [...failed.map((item) => item.name), current].filter(Boolean).join(", "));
+    setBusy(false);
   }
 
   async function saveDate(item: PantryItem) {
@@ -158,14 +169,14 @@ export function PantryWorkspace() {
       <Panel className="mb-7">
         <div className="mb-5 flex items-start gap-3">
           <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-2xl bg-mint text-xl">＋</span>
-          <div><h2 className="text-xl font-extrabold">Add an ingredient</h2><p className="mt-1 text-sm text-[#765b4d]">Search by name or a known alias.</p></div>
+          <div><h2 className="text-xl font-extrabold">Add ingredients</h2><p className="mt-1 text-sm text-[#765b4d]">Type one or several, separated by commas. Names and known aliases both work.</p></div>
         </div>
         <form onSubmit={addItem} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_12rem_auto] lg:items-end">
           <div className="relative">
-            <label htmlFor="ingredient-search" className="mb-2 block text-sm font-bold">Ingredient</label>
+            <label htmlFor="ingredient-search" className="mb-2 block text-sm font-bold">Ingredients</label>
             <input
-              id="ingredient-search" value={query} onChange={(event) => { setQuery(event.target.value); setSelected(null); setSuggestions([]); setNoMatchFor(""); }}
-              onKeyDown={handleSuggestionKeys} className={inputClass} placeholder="Try tomato or piyaj" autoComplete="off"
+              id="ingredient-search" value={query} ref={inputRef} onChange={(event) => { setQuery(event.target.value); setSuggestions([]); setNoMatchFor(""); }}
+              onKeyDown={handleSuggestionKeys} className={inputClass} placeholder="e.g. egg, tomato, piyaj" autoComplete="off"
               role="combobox" aria-autocomplete="list" aria-expanded={suggestions.length > 0} aria-controls="ingredient-suggestions"
               aria-activedescendant={suggestions[activeSuggestion] ? `ingredient-option-${suggestions[activeSuggestion].ingredientId}` : undefined}
             />
