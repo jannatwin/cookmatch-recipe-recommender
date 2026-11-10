@@ -70,7 +70,7 @@ test("admin journey: manage catalog, publish a recipe, see it recommended", asyn
 
   // The alias resolves to the renamed ingredient, and the new recipe is now a full match.
   await page.goto("/pantry");
-  await page.getByLabel("Ingredient", { exact: true }).fill(alias);
+  await page.getByLabel("Ingredients", { exact: true }).fill(alias);
   await page.getByRole("button", { name: "Add to pantry" }).click();
   await expect(page.locator("p[role=status]").filter({ hasText: `${renamed} added` })).toBeVisible();
   await page.goto("/recipes");

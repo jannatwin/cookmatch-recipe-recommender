@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 const inDays = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 
 async function addIngredient(page: Page, text: string, expiry?: string) {
-  await page.getByLabel("Ingredient", { exact: true }).fill(text);
+  await page.getByLabel("Ingredients", { exact: true }).fill(text);
   if (expiry) await page.locator("#new-expiry").fill(expiry);
   await page.getByRole("button", { name: "Add to pantry" }).click();
 }
@@ -27,9 +27,14 @@ test("main journey: register, pantry, recommendations, recipe, cooking, sign out
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/pantry$/);
   await expect(page.getByText("Your pantry is ready for a first ingredient")).toBeVisible();
+  await page.goto("/recipes");
+  await page.getByLabel("Cuisine").selectOption({ label: "Italian" });
+  await expect(page.getByRole("heading", { name: "Your pantry is empty" })).toBeVisible();
+  await page.goto("/pantry");
+  expect((await page.request.get("/icon.svg")).status()).toBe(200);
 
   // Suggestion pick, alias typed directly, expiry date, and an unknown name.
-  await page.getByLabel("Ingredient", { exact: true }).fill("eg");
+  await page.getByLabel("Ingredients", { exact: true }).fill("eg");
   await page.getByRole("option", { name: /Egg/ }).click();
   await page.getByRole("button", { name: "Add to pantry" }).click();
   await expect(page.locator("p[role=status]").filter({ hasText: "Egg added" })).toBeVisible();
@@ -37,12 +42,13 @@ test("main journey: register, pantry, recommendations, recipe, cooking, sign out
   await expect(page.locator("p[role=status]").filter({ hasText: "Onion added" })).toBeVisible();
   await addIngredient(page, "Tomato", inDays(2));
   await expect(page.locator("p[role=status]").filter({ hasText: "Tomato added" })).toBeVisible();
-  await addIngredient(page, "Oil");
-  await expect(page.locator("p[role=status]").filter({ hasText: "Oil added" })).toBeVisible();
-  await addIngredient(page, "Salt");
-  await expect(page.locator("p[role=status]").filter({ hasText: "Salt added" })).toBeVisible();
+  // Several at once: the known ones are added, the unknown one stays in the box to fix.
+  await addIngredient(page, "Oil, salt, qqqq");
+  await expect(page.locator("p[role=status]").filter({ hasText: "Oil, Salt added" })).toBeVisible();
+  await expect(page.locator("p[role=alert]")).toContainText("‘qqqq’ was not recognized".replace(/[‘’]/g, "'"));
+  await expect(page.getByLabel("Ingredients", { exact: true })).toHaveValue("qqqq");
   await expect(page.getByText("Use soon: 1")).toBeVisible();
-  await page.getByLabel("Ingredient", { exact: true }).fill("zzzz");
+  await page.getByLabel("Ingredients", { exact: true }).fill("zzzz");
   await expect(page.getByText("No ingredient matches “zzzz”")).toBeVisible();
   await addIngredient(page, "Egg");
   await expect(page.locator("p[role=alert]")).toContainText("already in the pantry");

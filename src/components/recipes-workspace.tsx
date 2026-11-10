@@ -34,6 +34,7 @@ export function RecipesWorkspace() {
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, totalItems: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [pantryEmpty, setPantryEmpty] = useState(false);
   const [providerRecipes, setProviderRecipes] = useState<ProviderRecommendation[]>([]);
   const [providerBusy, setProviderBusy] = useState(false);
   const [providerError, setProviderError] = useState("");
@@ -46,13 +47,13 @@ export function RecipesWorkspace() {
   const fetchRecipes = useCallback(async (page: number) => {
     const query = new URLSearchParams({ page: String(page), limit: "12" });
     for (const [key, value] of Object.entries(filters)) if (value) query.set(key, value);
-    return apiRequest<{ data: Recommendation[]; pagination: { page: number; totalPages: number; totalItems: number } }>(`/api/v1/recommendations?${query}`);
+    return apiRequest<{ data: Recommendation[]; hint?: string; pagination: { page: number; totalPages: number; totalItems: number } }>(`/api/v1/recommendations?${query}`);
   }, [filters]);
 
   useEffect(() => {
     let active = true; // ignore responses for filters that have since changed
     fetchRecipes(1)
-      .then((result) => { if (active) { setRecipes(result.data); setPagination(result.pagination); setError(""); } })
+      .then((result) => { if (active) { setRecipes(result.data); setPagination(result.pagination); setPantryEmpty(Boolean(result.hint)); setError(""); } })
       .catch((cause: unknown) => { if (active) { setError(cause instanceof Error ? cause.message : "Could not load recipe matches."); setRecipes([]); setPagination({ page: 1, totalPages: 1, totalItems: 0 }); } })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -87,9 +88,9 @@ export function RecipesWorkspace() {
     setProviderError("");
     setProviderRecipes([]);
     try {
-      const result = await apiRequest<{ data: ProviderRecommendation[] }>("/api/v1/providers/recipes?source=spoonacular&limit=6");
+      const result = await apiRequest<{ data: ProviderRecommendation[]; hint?: string }>("/api/v1/providers/recipes?source=spoonacular&limit=6");
       setProviderRecipes(result.data);
-      if (!result.data.length) setProviderError("Spoonacular did not find a match for these pantry items.");
+      if (!result.data.length) setProviderError(result.hint ?? "Spoonacular did not find a match for these pantry items.");
     } catch (cause) {
       setProviderError(cause instanceof Error ? cause.message : "Spoonacular is unavailable right now.");
     } finally {
@@ -123,6 +124,7 @@ export function RecipesWorkspace() {
       <div className="mb-4 flex items-end justify-between gap-3"><div><h2 className="text-xl font-extrabold">CookMatch collection</h2><p className="mt-1 text-sm text-[#765b4d]">{pagination.totalItems} recipe{pagination.totalItems === 1 ? "" : "s"} {hasFilters ? "match your filters" : "ranked for your pantry"}</p></div></div>
       {error && <p role="alert" className="mb-4 rounded-2xl bg-[#ffe1dd] px-4 py-3 text-sm font-semibold text-[#7b2b22]">{error}</p>}
       {loading && recipes.length === 0 ? <div role="status" className="rounded-3xl bg-white/60 px-5 py-10 text-center font-semibold">Finding recipes for your pantry…</div>
+        : pantryEmpty ? <EmptyState title="Your pantry is empty" description="Recipes are matched to the ingredients you have. Add a few to your pantry and your matches will appear here." action={<Link href="/pantry" className={buttonSecondary}>Add pantry ingredients</Link>} />
         : recipes.length === 0 ? <EmptyState title="No recipes matched this time" description={hasFilters ? "Try widening your filters, or add more ingredients to improve your matches." : "Add ingredients to your pantry and we’ll find recipes that fit."} action={<Link href={hasFilters ? "/recipes" : "/pantry"} onClick={hasFilters ? (event) => { event.preventDefault(); clearFilters(); } : undefined} className={buttonSecondary}>{hasFilters ? "Clear filters" : "Add pantry ingredients"}</Link>} />
           : <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{recipes.map((recipe) => <RecipeCard key={recipe.recipeId} recipe={{ ...recipe, href: `/recipes/${recipe.recipeId}`, providerLabel: "CookMatch recipe" }} />)}</div>}
       {pagination.page < pagination.totalPages && recipes.length > 0 && <div className="mt-7 text-center"><button type="button" onClick={() => void showMoreRecipes()} disabled={loading} className={buttonSecondary}>{loading ? "Loading…" : "Show more recipes"}</button></div>}
