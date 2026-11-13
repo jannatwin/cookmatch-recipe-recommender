@@ -85,4 +85,8 @@ join public.recipes r on r.source = 'cookmatch' and r.source_id = v.source_id
 join public.dietary_tags t on t.name = v.tag_name
 on conflict (recipe_id, tag_id) do nothing;
 
+-- Pantry staples weigh less in the match score (see migration 202611160001).
+update public.ingredients set is_staple = true
+where normalized_name in ('salt', 'oil', 'black pepper', 'water') and not is_staple;
+
 commit;

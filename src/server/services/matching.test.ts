@@ -10,6 +10,17 @@ test("matchScore is the percentage of required ingredients owned", () => {
   assert.equal(matchScore(0, 0), 0);
 });
 
+test("pantry staples count a quarter as much as other ingredients", () => {
+  // Fried rice fixture: rice, egg, butter, onion + salt (staple); the user has egg, onion and salt.
+  assert.equal(matchScore(3, 5, 1, 1), 52.9);
+  // Owning only the staple of a four-ingredient recipe is worth very little.
+  assert.equal(matchScore(1, 4, 1, 1), 7.7);
+  // A full match is still 100, and a recipe made only of staples does not divide by zero.
+  assert.equal(matchScore(5, 5, 2, 2), 100);
+  assert.equal(matchScore(1, 2, 1, 2), 50);
+  assert.equal(matchScore(0, 0, 0, 0), 0);
+});
+
 test("one or two missing ingredients is almost achievable", () => {
   assert.deepEqual([0, 1, 2, 3].map(isAlmostAchievable), [false, true, true, false]);
 });

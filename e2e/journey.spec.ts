@@ -65,7 +65,8 @@ test("main journey: register, pantry, recommendations, recipe, cooking, sign out
   await expect(cards.first()).toHaveText("Tomato Egg Curry");
   await expect(cards.nth(1)).toHaveText("Plain Omelette");
   const friedRice = page.locator("article", { hasText: "Fried Rice" });
-  await expect(friedRice).toContainText("60%");
+  // Rice and butter are missing; salt is a staple and counts a quarter: 2.25 of 4.25.
+  await expect(friedRice).toContainText("53%");
   await expect(friedRice).toContainText("Almost there · 2 missing");
   await expect(friedRice).toContainText("Butter · or use Oil");
   await expect(page.locator("article", { hasText: "Tomato Egg Curry" })).toContainText(

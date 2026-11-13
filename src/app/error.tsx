@@ -2,10 +2,12 @@
 
 import { useEffect } from "react";
 import { buttonPrimary, EmptyState } from "@/components/ui";
+import { reportClientError } from "@/lib/report-error";
 
 export default function ErrorPage({ error, retry }: { error: unknown; retry: () => void }) {
   useEffect(() => {
     console.error("Page error", error instanceof Error ? error.name : "unknown");
+    reportClientError("boundary", error);
   }, [error]);
 
   return (

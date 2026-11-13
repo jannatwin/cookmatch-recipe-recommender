@@ -82,7 +82,7 @@ export function RecipeFilters({
           <h2 className="text-lg font-extrabold">Find your kind of dinner</h2>
           <p className="mt-1 text-sm text-muted">
             {showMatchFilters
-              ? "Filters work together and keep the match ranking."
+              ? "Filters work together and keep the match ranking. Staples such as salt and oil count for less in the score."
               : "Filters work together."}
           </p>
         </div>

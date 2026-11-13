@@ -6,15 +6,25 @@
 
 [![CI](https://github.com/jannatwin/cookmatch-recipe-recommender/actions/workflows/ci.yml/badge.svg)](https://github.com/jannatwin/cookmatch-recipe-recommender/actions/workflows/ci.yml)
 
+| Ranked recipes | Recipe page |
+| --- | --- |
+| ![Recipes ranked by pantry match](docs/screenshots/recipes.jpg) | ![Recipe page with match score, save button and steps](docs/screenshots/recipe.jpg) |
+
+| Pantry | Ingredients and steps |
+| --- | --- |
+| ![Pantry with ingredient suggestions and picker](docs/screenshots/pantry.jpg) | ![Ingredient quantities, substitutes and cooking steps](docs/screenshots/recipe-steps.jpg) |
+
 ## Features
 
 - **Pantry**: add ingredients by name or alias (for example "piyaj" for onion), with suggestions as you type, an ingredient picker and optional expiry dates.
 - **Ranked recommendations**: every recipe gets a match score, a list of missing ingredients and possible substitutes. Recipes that use expiring ingredients rank higher.
+- **Weighted matching**: pantry staples such as salt, oil and pepper count a quarter as much as other ingredients, so owning the seasoning alone does not make a recipe look like a match.
 - **Filters**: cuisine, cooking time, dietary preference, minimum match and "almost achievable" (one or two ingredients missing).
 - **Recipe details**: photo, ingredient quantities, step-by-step cooking mode and photo credits.
 - **Guest browsing**: the recipe collection is open without an account; pantry matching and saved recipes need one.
 - **Saved recipes and recently viewed**.
-- **Admin tools**: manage recipes, ingredients, aliases and substitutes.
+- **Admin tools**: manage recipes, ingredients, aliases, substitutes and which ingredients are staples.
+- **Built-in error monitoring**: server and browser errors are written to the server log as structured lines, with no third-party service.
 
 ## Tech stack
 
@@ -70,7 +80,7 @@ Never commit `.env.local` or any secret key. Use separate values for local devel
 | Suite | Command | Covers |
 | --- | --- | --- |
 | Unit | `npm test` | Matching rules and small helpers |
-| Database (pgTAP) | `npx supabase test db` | Ranking, filters, row-level security, saved recipes, guest limit |
+| Database (pgTAP) | `npx supabase test db` | Ranking, staple weighting, filters, row-level security, saved recipes, guest limit, recipe edits |
 | End-to-end | `npm run test:e2e` | Register, pantry, recommendations, cooking, guest browsing, saved recipes, admin |
 
 The database and end-to-end tests need the local Supabase stack. The end-to-end tests create accounts and catalog rows, so they refuse to run against anything but local Supabase. Run `npx playwright install chromium` once, then pass the local values from `npx supabase status`:
@@ -112,8 +122,14 @@ Seed files are optional content, not schema. Each one is safe to run more than o
 | 3 | `supabase/seeds/world_recipes.sql` | 100 recipes: 20 each for Bangladeshi, Indian, Chinese, Mexican and Thai cooking |
 | 4 | `supabase/seeds/recipe_images.sql` | A photo and photo credit for every seed recipe |
 | 5 | `supabase/seeds/recipe_quantities.sql` | Ingredient quantities for every seed recipe |
+| 6 | `supabase/seeds/recipe_steps_detailed.sql` | Fuller step-by-step instructions for 30 well-known recipes |
+| 7 | `supabase/seeds/substitutes.sql` | 55 ingredient substitutes with short notes |
 
-The seed catalog contains no pork, bacon, ham or sausage. A database seeded before that change needs `supabase/seeds/remove_pork.sql` run once, then files 2 to 5 again.
+The seed catalog contains no pork, bacon, ham or sausage. A database seeded before that change needs `supabase/seeds/remove_pork.sql` run once, then files 2 to 7 again.
+
+## Error monitoring
+
+Errors are reported to the app's own server log as JSON lines containing `"event": "cookmatch_error"`: server errors through `src/instrumentation.ts`, browser errors through `POST /api/v1/client-errors`. On Vercel, open the project's **Logs** and search for `cookmatch_error`. Reports carry the page path, message and stack only; no cookies, tokens or query strings. See [Debugging](docs/debugging.md).
 
 ## Project structure
 
@@ -153,3 +169,7 @@ AI coding agents should read [AGENTS.md](AGENTS.md) first.
 - **Seed recipes** are written for CookMatch. Quantities are home-cooking estimates, not tested measurements, and dietary tags follow the ingredient list; they are not allergy or certification claims.
 - **Photos** come from Wikimedia Commons under Creative Commons or public-domain licences. Each recipe page credits the photographer and licence.
 - **Spoonacular and TheMealDB** are external API providers, not open datasets. They are called only from the server through their official APIs, with attribution, and their data is not stored or redistributed. Check each provider's current terms before caching or importing anything.
+
+## License
+
+Released under the [MIT License](LICENSE). Recipe photos keep their own Creative Commons or public-domain licences, credited on each recipe page.

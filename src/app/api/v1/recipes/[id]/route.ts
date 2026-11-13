@@ -55,7 +55,7 @@ export async function GET(request: Request, context: Context) {
     const tagIds = tags.data.map((tag) => tag.tag_id);
     const [ingredients, dietaryTags] = await Promise.all([
       ingredientIds.length
-        ? supabase.from("ingredients").select("id,name").in("id", ingredientIds)
+        ? supabase.from("ingredients").select("id,name,is_staple").in("id", ingredientIds)
         : Promise.resolve({ data: [], error: null }),
       tagIds.length
         ? supabase.from("dietary_tags").select("id,name").in("id", tagIds)
@@ -103,6 +103,7 @@ export async function GET(request: Request, context: Context) {
           ingredientId: ingredient.id,
           name: link.display_name ?? ingredient.name,
           amount: link.amount,
+          staple: ingredient.is_staple,
           unit: link.unit,
           inPantry: pantryIds.has(ingredient.id),
           ...(!pantryIds.has(ingredient.id)
@@ -128,7 +129,12 @@ export async function GET(request: Request, context: Context) {
       dietaryTags: dietaryTags.data.map((tag) => tag.name),
       ingredients: recipeIngredients,
       steps: steps.data.map((step) => ({ stepNumber: step.step_number, instruction: step.instruction })),
-      matchScore: matchScore(haveCount, requiredCount),
+      matchScore: matchScore(
+        haveCount,
+        requiredCount,
+        recipeIngredients.filter((ingredient) => ingredient.inPantry && ingredient.staple).length,
+        recipeIngredients.filter((ingredient) => ingredient.staple).length,
+      ),
       missingCount: requiredCount - haveCount,
     });
   } catch (error) {

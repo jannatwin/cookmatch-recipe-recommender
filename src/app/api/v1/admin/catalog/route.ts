@@ -41,7 +41,7 @@ export async function GET() {
             .range(from, to),
         ),
         fetchAll((from, to) =>
-          supabase.from("ingredients").select("id,name").order("name").order("id").range(from, to),
+          supabase.from("ingredients").select("id,name,is_staple").order("name").order("id").range(from, to),
         ),
         fetchAll((from, to) =>
           supabase
@@ -103,7 +103,11 @@ export async function GET() {
         dietaryTagIds: (tagsByRecipe.get(recipe.id) ?? []).map((row) => row.tag_id),
         steps: (stepsByRecipe.get(recipe.id) ?? []).map((row) => ({ instruction: row.instruction })),
       })),
-      ingredients: ingredients.map(({ id, name }) => ({ ingredientId: id, name })),
+      ingredients: ingredients.map(({ id, name, is_staple }) => ({
+        ingredientId: id,
+        name,
+        isStaple: is_staple,
+      })),
       aliases: aliases.map(({ id, ingredient_id, alias }) => ({
         aliasId: id,
         ingredientId: ingredient_id,

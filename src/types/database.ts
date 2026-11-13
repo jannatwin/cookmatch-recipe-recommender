@@ -107,14 +107,14 @@ isOneToOne: false
                   ]
                 },"ingredients": {
                   Row: {
-                    "created_at": string,"id": number,"name": string,"normalized_name": string
+                    "created_at": string,"id": number,"is_staple": boolean,"name": string,"normalized_name": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id"?: number,"name": string,"normalized_name": string
+                    "created_at"?: string,"id"?: number,"is_staple"?: boolean,"name": string,"normalized_name": string
                   }
                   Update: {
-                    "created_at"?: string,"id"?: number,"name"?: string,"normalized_name"?: string
+                    "created_at"?: string,"id"?: number,"is_staple"?: boolean,"name"?: string,"normalized_name"?: string
                   }
                   Relationships: [
                     

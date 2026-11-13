@@ -18,7 +18,8 @@ CookMatch takes the user's available ingredients as the main input and returns a
 
 | Term | Meaning |
 | --- | --- |
-| Match score | Percentage of a recipe's required ingredients that the user already has |
+| Match score | Weighted percentage of a recipe's required ingredients that the user already has; pantry staples count for less |
+| Pantry staple | A basic ingredient most kitchens have (salt, oil, black pepper, water). Staples weigh a quarter of a normal ingredient in the match score |
 | Almost-achievable recipe | A recipe with only one or two missing ingredients |
 | Substitute | An alternative ingredient that can replace a missing one in a recipe |
 | Expiring ingredient | An ingredient the user marked as close to its expiry date |
@@ -85,7 +86,7 @@ The system shall provide the 21 functions below. Priority is High (needed for th
 | ID | Requirement | Priority |
 | --- | --- | --- |
 | FR-8 | The system shall search the recipe database for recipes that use the user's ingredients | High |
-| FR-9 | The system shall calculate a match score for each recipe as the percentage of required ingredients the user has | High |
+| FR-9 | The system shall calculate a match score for each recipe as the weighted percentage of required ingredients the user has, where pantry staples count a quarter as much as other ingredients | High |
 | FR-10 | The system shall return recipes ranked from highest to lowest match score | High |
 | FR-11 | The system shall give higher priority to recipes that use expiring ingredients | Medium |
 | FR-12 | The system shall show, for each recipe, which ingredients the user has and which are missing | High |
@@ -165,11 +166,13 @@ The system stores the following main entities.
 
 ### Matching rule
 
-The match score of a recipe is the share of its required ingredients that the user already has. Quantities are not considered.
+The match score of a recipe is the weighted share of its required ingredients that the user already has. Each ingredient has weight 1, except pantry staples (salt, oil, black pepper, water), which have weight 0.25, so a recipe does not rank highly just because the user owns its seasoning. Quantities are not considered.
 
 ```latex
-\text{Match score} = \frac{\text{ingredients the user has}}{\text{ingredients the recipe requires}} \times 100\%
+\text{Match score} = \frac{\text{total weight of the ingredients the user has}}{\text{total weight of the ingredients the recipe requires}} \times 100\%
 ```
+
+A recipe is recommended only when the user has at least one of its non-staple ingredients. Staples still appear in the have and missing lists and count towards "almost achievable".
 
 Recipes are sorted by match score from highest to lowest. A recipe that uses expiring ingredients ranks above recipes with a similar score; the exact weighting is to be decided in the design phase.
 
