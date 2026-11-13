@@ -58,7 +58,7 @@ export function PantryWorkspace() {
   useEffect(() => {
     // Several ingredients can be entered separated by commas; suggest for the one being typed.
     const text = query.slice(query.lastIndexOf(",") + 1).trim();
-    if (text.length < 2) return;
+    if (!text) return;
     let active = true; // ignore responses that arrive after the query changed
     const timeout = window.setTimeout(() => {
       apiRequest<{ data: Suggestion[] }>(`/api/v1/ingredients/search?q=${encodeURIComponent(text)}&limit=8`)
@@ -82,7 +82,8 @@ export function PantryWorkspace() {
     } else if (event.key === "ArrowUp" && suggestions.length) {
       event.preventDefault();
       setActiveSuggestion((index) => (index + suggestions.length - 1) % suggestions.length);
-    } else if (event.key === "Enter" && suggestions.length) {
+    } else if ((event.key === "Enter" || (event.key === "Tab" && !event.shiftKey)) && suggestions.length) {
+      // Tab completes only while suggestions are open; otherwise it moves focus as usual.
       event.preventDefault();
       chooseSuggestion(suggestions[activeSuggestion]);
     } else if (event.key === "Escape") {
@@ -169,7 +170,7 @@ export function PantryWorkspace() {
       <Panel className="mb-7">
         <div className="mb-5 flex items-start gap-3">
           <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-2xl bg-mint text-xl">＋</span>
-          <div><h2 className="text-xl font-extrabold">Add ingredients</h2><p className="mt-1 text-sm text-[#765b4d]">Type one or several, separated by commas. Names and known aliases both work.</p></div>
+          <div><h2 className="text-xl font-extrabold">Add ingredients</h2><p className="mt-1 text-sm text-[#765b4d]">Start typing to see matching ingredients, then press Tab or Enter to complete. Separate several with commas.</p></div>
         </div>
         <form onSubmit={addItem} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_12rem_auto] lg:items-end">
           <div className="relative">
