@@ -45,27 +45,20 @@ export async function GET(_request: Request, context: Context) {
         amount: ingredient.amount,
         unit: ingredient.unit,
         inPantry,
+        staple: Boolean(match?.isStaple),
       };
     });
-    const requiredKeys = new Set(
-      ingredients.map((ingredient) =>
+    // The same ingredient can be listed twice by a provider: score each one once.
+    const required = new Map(
+      ingredients.map((ingredient) => [
         ingredient.ingredientId === null
           ? `name:${normalizeIngredientName(ingredient.name)}`
           : `id:${ingredient.ingredientId}`,
-      ),
+        ingredient,
+      ]),
     );
-    const haveKeys = new Set(
-      ingredients.flatMap((ingredient) =>
-        ingredient.inPantry
-          ? [
-              ingredient.ingredientId === null
-                ? `name:${normalizeIngredientName(ingredient.name)}`
-                : `id:${ingredient.ingredientId}`,
-            ]
-          : [],
-      ),
-    );
-    const haveCount = haveKeys.size;
+    const requiredList = [...required.values()];
+    const haveList = requiredList.filter((ingredient) => ingredient.inPantry);
     return Response.json({
       source: recipe.provider,
       sourceId: recipe.sourceId,
@@ -79,8 +72,13 @@ export async function GET(_request: Request, context: Context) {
       dietaryTags: recipe.dietaryTags,
       ingredients,
       steps: recipe.steps.map((instruction, index) => ({ stepNumber: index + 1, instruction })),
-      matchScore: matchScore(haveCount, requiredKeys.size),
-      missingCount: requiredKeys.size - haveCount,
+      matchScore: matchScore(
+        haveList.length,
+        requiredList.length,
+        haveList.filter((ingredient) => ingredient.staple).length,
+        requiredList.filter((ingredient) => ingredient.staple).length,
+      ),
+      missingCount: requiredList.length - haveList.length,
     });
   } catch (error) {
     if (error instanceof ProviderError) {

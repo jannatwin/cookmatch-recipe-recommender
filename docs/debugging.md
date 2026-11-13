@@ -48,9 +48,18 @@ Vercel environment variables are scoped to local/preview/production. After chang
 
 Never “fix” an RLS error by disabling RLS or switching all user requests to a Supabase secret key.
 
+## 4a. Error monitoring
+
+The app reports errors to its own server log, so no third-party service is needed. Every report is one JSON line with `"event": "cookmatch_error"`:
+
+- **Server errors** (rendering, route handlers, proxy) come from `src/instrumentation.ts`, with the method, path (no query string), route and error digest.
+- **Browser errors** (uncaught errors, unhandled promise rejections, error-boundary crashes) are posted by `src/instrumentation-client.ts` and `src/app/error.tsx` to `POST /api/v1/client-errors`, at most five per page load, with the page path, message and stack.
+
+On Vercel, open the project's Logs and search for `cookmatch_error`. Reports never include cookies, tokens, query strings or user identifiers.
+
 ## 5. Matching troubleshooting
 
-For one recipe, manually count the distinct required canonical ingredients and pantry overlap. Expected score is `haveCount / requiredCount * 100`. Then inspect:
+For one recipe, manually count the distinct required canonical ingredients and pantry overlap. Expected score is the weighted share: each ingredient weighs 1, pantry staples (`ingredients.is_staple`) weigh 0.25, and a recipe is listed only when at least one non-staple ingredient is owned. Then inspect:
 
 - Whether provider ingredient text maps to the intended canonical ID.
 - Whether aliases are normalized consistently (trim, Unicode normalization, case-insensitive comparison).

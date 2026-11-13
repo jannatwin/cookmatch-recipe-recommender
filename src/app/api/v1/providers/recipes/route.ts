@@ -72,12 +72,13 @@ export async function GET(request: Request) {
         const requiredNames = detail
           ? detail.ingredients.map((ingredient) => ingredient.name)
           : [...summary.usedIngredientNames, ...summary.missingIngredientNames];
-        const required = new Map<string, { name: string; ingredientId: number | null }>();
+        const required = new Map<string, { name: string; ingredientId: number | null; staple: boolean }>();
         for (const name of requiredNames) {
           const normalized = normalizeIngredientName(name);
           const match = resolvedNames.get(normalized);
           const key = match ? `id:${match.id}` : `name:${normalized}`;
-          if (!required.has(key)) required.set(key, { name, ingredientId: match?.id ?? null });
+          if (!required.has(key))
+            required.set(key, { name, ingredientId: match?.id ?? null, staple: Boolean(match?.isStaple) });
         }
         const have = [...required.values()].filter((ingredient) =>
           ingredient.ingredientId !== null
@@ -94,7 +95,12 @@ export async function GET(request: Request) {
           cuisine: detail?.cuisine ?? null,
           cookingTimeMin: detail?.cookingTimeMin ?? null,
           dietaryTags: detail?.dietaryTags ?? [],
-          matchScore: matchScore(have.length, required.size),
+          matchScore: matchScore(
+            have.length,
+            required.size,
+            have.filter((ingredient) => ingredient.staple).length,
+            [...required.values()].filter((ingredient) => ingredient.staple).length,
+          ),
           requiredCount: required.size,
           haveCount: have.length,
           missingCount: missing.length,

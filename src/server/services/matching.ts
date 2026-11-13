@@ -8,9 +8,17 @@ export function normalizeIngredientName(value: string) {
   return value.normalize("NFKC").trim().toLocaleLowerCase("en-US").replace(/\s+/g, " ");
 }
 
-/** Percentage of required ingredients the user has, to one decimal place. */
-export function matchScore(haveCount: number, requiredCount: number) {
-  return requiredCount > 0 ? Math.round((haveCount / requiredCount) * 1000) / 10 : 0;
+/** Pantry staples (salt, oil, pepper, water) count this much of a normal ingredient. Same value as in SQL. */
+export const STAPLE_WEIGHT = 0.25;
+
+/**
+ * Weighted percentage of required ingredients the user has, to one decimal place.
+ * Counts include staples; pass how many of each are staples so they can be weighted down.
+ */
+export function matchScore(haveCount: number, requiredCount: number, haveStaples = 0, requiredStaples = 0) {
+  const weigh = (count: number, staples: number) => count - staples + staples * STAPLE_WEIGHT;
+  const required = weigh(requiredCount, requiredStaples);
+  return required > 0 ? Math.round((weigh(haveCount, haveStaples) / required) * 1000) / 10 : 0;
 }
 
 export function isAlmostAchievable(missingCount: number) {

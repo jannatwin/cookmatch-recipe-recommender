@@ -124,6 +124,7 @@ Paginated responses include:
 | 24 | GET | `/favorites` | The user's saved recipes, newest first | User | FR-23 |
 | 25 | PUT | `/favorites/{recipeId}` | Save a recipe (idempotent) | User | FR-23 |
 | 26 | DELETE | `/favorites/{recipeId}` | Remove a saved recipe | User | FR-23 |
+| 27 | POST | `/client-errors` | Browser error report `{ kind, message, stack?, path }`, written to the server log; returns `204` | Public (rate limited) | NFR |
 
 ---
 
@@ -433,7 +434,7 @@ Field notes:
 
 | Field | Meaning |
 | --- | --- |
-| `matchScore` | Percentage of required ingredients the user has (quantities are ignored) |
+| `matchScore` | Weighted percentage of required ingredients the user has: pantry staples (salt, oil, black pepper, water) weigh 0.25, other ingredients 1. Quantities are ignored. A recipe is listed only when the user has at least one non-staple ingredient |
 | `almostAchievable` | `true` when `missingCount` is 1 or 2 |
 | `expiringCount` | How many of the matched ingredients are close to expiry |
 | `missingIngredients` | Missing items with substitutes, when any exist |
@@ -454,7 +455,7 @@ For a signed-in user, an empty pantry returns `200 OK` with an empty `data` arra
 
 `GET /recipes/{id}`  ·  Public (guests get `"guest": true` and every ingredient with `inPantry: false`)
 
-Each ingredient also carries `amount` and `unit` (either may be `null`), and signed-in users get `"saved": true|false`. Guest requests to the public endpoints are limited to 120 per minute per client address and then return `429 RATE_LIMITED`.
+Each ingredient also carries `amount` and `unit` (either may be `null`) and `staple` (true for pantry staples), and signed-in users get `"saved": true|false`. Guest requests to the public endpoints are limited to 120 per minute per client address and then return `429 RATE_LIMITED`.
 
 ### 6.1a Saved recipes
 
@@ -655,15 +656,17 @@ Errors: `403 FORBIDDEN`, `404 NOT_FOUND`.
 
 To change a note, remove the mapping and create it again.
 
-### 7.8 Rename an ingredient
+### 7.8 Rename an ingredient or mark it as a staple
 
 `PATCH /ingredients/{id}`  ·  Admin
 
 ```json
-{ "name": "Fresh Coriander" }
+{ "name": "Fresh Coriander", "isStaple": false }
 ```
 
-Response `200 OK`: `{ "ingredientId": 44, "name": "Fresh Coriander" }`
+Send `name`, `isStaple` or both. Staples weigh a quarter of a normal ingredient in match scores.
+
+Response `200 OK`: `{ "ingredientId": 44, "name": "Fresh Coriander", "isStaple": false }`
 
 Errors: `400 VALIDATION_ERROR`, `403 FORBIDDEN`, `404 NOT_FOUND`, `409 DUPLICATE` (another ingredient or alias already uses the name).
 

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { apiRequest } from "@/lib/client-api";
 import { buttonPrimary, buttonSecondary, EmptyState, inputClass, PageHeading, Panel } from "@/components/ui";
 
-type Ingredient = { ingredientId: number; name: string };
+type Ingredient = { ingredientId: number; name: string; isStaple?: boolean };
 type Alias = { aliasId: number; ingredientId: number; alias: string };
 type Option = { cuisineId: number; name: string };
 type Tag = { tagId: number; name: string };
@@ -263,6 +263,19 @@ export function AdminWorkspace() {
         }),
       "Ingredient renamed.",
       "Could not rename the ingredient.",
+    );
+  }
+
+  // Staples (salt, oil…) count a quarter as much as other ingredients in the match score.
+  function toggleStaple(item: Ingredient) {
+    void mutate(
+      () =>
+        apiRequest(`/api/v1/ingredients/${item.ingredientId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ isStaple: !item.isStaple }),
+        }),
+      item.isStaple ? "Ingredient is no longer a pantry staple." : "Ingredient marked as a pantry staple.",
+      "Could not update the ingredient.",
     );
   }
 
@@ -903,8 +916,25 @@ export function AdminWorkspace() {
                 .map((item) => (
                   <li key={item.ingredientId} className="rounded-2xl bg-cream/80 p-4">
                     <div className="flex items-start justify-between gap-2">
-                      <h3 className="min-w-0 break-words font-extrabold">{item.name}</h3>
+                      <h3 className="min-w-0 break-words font-extrabold">
+                        {item.name}
+                        {item.isStaple && (
+                          <span className="ml-2 rounded-full bg-butter px-2 py-0.5 text-[11px] font-bold">
+                            Staple
+                          </span>
+                        )}
+                      </h3>
                       <div className="flex shrink-0 gap-1">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => toggleStaple(item)}
+                          aria-pressed={Boolean(item.isStaple)}
+                          aria-label={`${item.isStaple ? "Unmark" : "Mark"} ${item.name} as a pantry staple`}
+                          className="min-h-11 rounded-lg px-2 text-xs font-bold underline underline-offset-4 hover:bg-white focus-visible:outline-4 focus-visible:outline-cocoa disabled:opacity-50"
+                        >
+                          {item.isStaple ? "Not a staple" : "Staple"}
+                        </button>
                         <button
                           type="button"
                           disabled={busy}

@@ -193,7 +193,9 @@ For each published recipe:
 required = distinct canonical ingredients required by the recipe
 have = required ingredients present in the current user's pantry
 missing = required minus have
-matchScore = required is empty ? 0 : (have count / required count) * 100
+weight(ingredient) = 0.25 if it is a pantry staple (ingredients.is_staple), otherwise 1
+matchScore = required is empty ? 0 : (sum of weight over have / sum of weight over required) * 100
+listed = have contains at least one non-staple ingredient
 almostAchievable = missing count is 1 or 2
 expiringCount = matched ingredients whose expiry date is in [today, today + warningWindow]
 ```

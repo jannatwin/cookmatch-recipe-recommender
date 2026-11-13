@@ -55,7 +55,10 @@ export async function resolveIngredientNames(supabase: SupabaseClient<Database>,
   const normalizedNames = [...new Set(names.map(normalizeIngredientName))];
   const [{ data: ingredients, error: ingredientsError }, { data: aliases, error: aliasesError }] =
     await Promise.all([
-      supabase.from("ingredients").select("id,name,normalized_name").in("normalized_name", normalizedNames),
+      supabase
+        .from("ingredients")
+        .select("id,name,normalized_name,is_staple")
+        .in("normalized_name", normalizedNames),
       supabase
         .from("ingredient_aliases")
         .select("ingredient_id,normalized_alias")
@@ -65,16 +68,22 @@ export async function resolveIngredientNames(supabase: SupabaseClient<Database>,
   if (ingredientsError || aliasesError)
     throw new ApiError(500, "SERVER_ERROR", "Could not look up ingredients");
   const byName = new Map(
-    (ingredients ?? []).map((item) => [item.normalized_name, { id: item.id, name: item.name }]),
+    (ingredients ?? []).map((item) => [
+      item.normalized_name,
+      { id: item.id, name: item.name, isStaple: item.is_staple },
+    ]),
   );
   const aliasToId = new Map((aliases ?? []).map((item) => [item.normalized_alias, item.ingredient_id]));
   const aliasIds = [...new Set(aliases?.map((item) => item.ingredient_id) ?? [])];
   const aliasIngredients = aliasIds.length
-    ? await supabase.from("ingredients").select("id,name").in("id", aliasIds)
+    ? await supabase.from("ingredients").select("id,name,is_staple").in("id", aliasIds)
     : { data: [], error: null };
   if (aliasIngredients.error) throw new ApiError(500, "SERVER_ERROR", "Could not resolve ingredient aliases");
   const byId = new Map(
-    (aliasIngredients.data ?? []).map((item) => [item.id, { id: item.id, name: item.name }]),
+    (aliasIngredients.data ?? []).map((item) => [
+      item.id,
+      { id: item.id, name: item.name, isStaple: item.is_staple },
+    ]),
   );
 
   return new Map(

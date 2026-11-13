@@ -11,6 +11,7 @@ type Ingredient = {
   ingredientId: number | null;
   name: string;
   inPantry: boolean;
+  staple?: boolean;
   amount?: string | null;
   unit?: string | null;
   substitutes?: Array<{ ingredientId: number; name: string; note: string | null }>;
@@ -290,6 +291,9 @@ export function RecipeDetail({ source, id }: { source: "cookmatch" | "spoonacula
                           className={`mt-1 block text-xs font-bold ${item.inPantry ? "text-success" : "text-danger"}`}
                         >
                           {item.inPantry ? "In your pantry" : "Missing"}
+                          {item.staple && (
+                            <span className="font-semibold text-muted"> · pantry staple, counts less</span>
+                          )}
                         </span>
                       )}
                       {!item.inPantry &&

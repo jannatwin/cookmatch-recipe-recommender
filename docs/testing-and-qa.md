@@ -51,7 +51,7 @@ Testing and quality assurance plan for CookMatch, built with TypeScript, Next.js
 
 | Suite | Command | Covers |
 | --- | --- | --- |
-| Unit | `npm test` | `src/server/services/matching.ts`: match score, almost-achievable threshold, expiry window, name normalization |
+| Unit | `npm test` | `src/server/services/matching.ts`: weighted match score, almost-achievable threshold, expiry window, name normalization; plus small helpers (client keys, recent recipes, links, image hosts, error reports) |
 | Database (pgTAP) | `npx supabase test db` | `supabase/tests/`: ranking, filters, pagination, expiry boost, pantry isolation, admin-only writes, role escalation, anonymous access |
 | End to end (Playwright) | `npm run test:e2e` | `e2e/`: main user journey at desktop and 375 px widths, and the admin catalog journey |
 
@@ -98,15 +98,15 @@ Use this fixed deterministic CookMatch fixture so expected results can be calcul
 | user_c | user | (empty) |
 | admin_1 | admin | n/a |
 
-**Expected match scores for user_a** (Egg, Onion, Tomato, Oil, Salt)
+**Expected match scores for user_a** (Egg, Onion, Tomato, Oil, Salt). Oil and Salt are pantry staples and weigh 0.25 each.
 
 | Recipe | Have | Required | Score | Missing |
 | --- | --- | --- | --- | --- |
 | R1 Tomato Egg Curry | 5 | 5 | 100% | none |
 | R5 Plain Omelette | 3 | 3 | 100% | none |
-| R2 Fried Rice | 3 | 5 | 60% | Rice, Butter |
-| R3 Chicken Curry | 3 | 6 | 50% | Chicken, Garlic, Chili |
-| R4 Garlic Butter Rice | 1 | 4 | 25% | Rice, Butter, Garlic |
+| R2 Fried Rice | 3 | 5 | 52.9% (2.25 of 4.25) | Rice, Butter |
+| R3 Chicken Curry | 3 | 6 | 33.3% (1.5 of 4.5) | Chicken, Garlic, Chili |
+| R4 Garlic Butter Rice | 1 | 4 | not listed (only a staple is owned) | Rice, Butter, Garlic |
 
 ---
 
@@ -157,7 +157,7 @@ Status values: Not run, Pass, Fail, Blocked. Priority: High, Medium, Low.
 
 | ID | Requirement | Test case | Steps | Expected result | Priority |
 | --- | --- | --- | --- | --- | --- |
-| TC-030 | FR-9 | Match score is correct | Get recommendations as user_a | Scores match the table in section 4 (R1 100, R5 100, R2 60, R3 50, R4 25) | High |
+| TC-030 | FR-9 | Match score is correct | Get recommendations as user_a | Scores match the table in section 4 (R1 100, R5 100, R2 52.9, R3 33.3; R4 is not listed) | High |
 | TC-031 | FR-10 | Ranking order | Get recommendations as user_a | Order is by score, highest first | High |
 | TC-032 | FR-10 | Tie-break by cooking time | Compare R1 and R5, both 100% | R5 (10 min) listed before R1 (25 min) when no expiring items | Medium |
 | TC-033 | FR-11 | Expiring ingredient boost | Set Tomato to expire in 2 days, then get recommendations | R1 ranks above R5 because it uses an expiring ingredient | High |

@@ -2,6 +2,7 @@
   "name": "cookmatch-recipe-recommender",
   "version": "0.1.0",
   "description": "Recipe recommender that ranks recipes by the ingredients you already have.",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "next dev",
