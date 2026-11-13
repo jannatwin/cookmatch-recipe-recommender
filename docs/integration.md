@@ -33,7 +33,7 @@ Keep matching, ingredient normalization and provider response normalization in s
 
 Use Server Components for initial reads and Server Actions or Route Handlers for mutations. Create separate Supabase clients for browser and server contexts using `@supabase/ssr`. The server must validate the signed-in user; RLS must still enforce row ownership. Keep direct database access behind feature/service functions so UI does not encode RLS or matching policy.
 
-The endpoint shapes in `API.md` are logical contracts for Route Handlers if exposed. The first-party UI may use Server Actions instead of making every interaction call a REST endpoint. Do not add a separate Express service.
+The endpoint shapes in `api.md` are logical contracts for Route Handlers if exposed. The first-party UI may use Server Actions instead of making every interaction call a REST endpoint. Do not add a separate Express service.
 
 ## 4. Supabase and migrations
 

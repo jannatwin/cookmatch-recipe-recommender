@@ -1,6 +1,6 @@
 # CookMatch Implementation Guide
 
-This guide turns the project requirements into a buildable plan for AI coding agents and developers. Read it together with the [Software Requirements Specification](CookMatch%20Software%20Requirements%20Specification.md). The SRS defines the product behavior; this guide defines the selected implementation stack and the recommended build sequence.
+This guide turns the project requirements into a buildable plan for AI coding agents and developers. Read it together with the [Software Requirements Specification](srs.md). The SRS defines the product behavior; this guide defines the selected implementation stack and the recommended build sequence.
 
 ## 1. Product goal
 
@@ -14,7 +14,7 @@ This is a browser-based web app that works on mobile and desktop. A native Andro
 | --- | --- |
 | Language | TypeScript, strict mode, in frontend and server code |
 | Full-stack framework | Next.js App Router (React) |
-| Styling | Tailwind CSS; follow `Design.md` for CookMatch's claymorphism visual direction while preserving accessibility |
+| Styling | Tailwind CSS; follow `design.md` for CookMatch's claymorphism visual direction while preserving accessibility |
 | Database | Supabase-hosted PostgreSQL |
 | Authentication | Supabase Auth, using cookie-based SSR integration with `@supabase/ssr` |
 | Database client | `@supabase/supabase-js`; use generated TypeScript database types |
@@ -294,7 +294,7 @@ Do the phases in order. Keep each phase reviewable and update this guide if a de
 
 ## 11. Verification expectations
 
-The project includes a QA plan in `Testing & QA.md`; implement its linked checks. At minimum, verify:
+The project includes a QA plan in `testing-and-qa.md`; implement its linked checks. At minimum, verify:
 
 - Registration, login, logout and role enforcement.
 - User-to-user pantry isolation through RLS.
@@ -330,7 +330,7 @@ Do not place secrets in `.env.example`. Configure separate values for local deve
 - **Identity model:** Supabase Auth UUIDs replace the local integer user table shown in the older architecture draft.
 - **Dietary correctness:** Provider dietary labels can be incomplete. Do not claim allergy safety or certified nutrition accuracy.
 - **Image hosting:** Prefer provider image URLs only when permitted. Use Supabase Storage for images the project owns or is allowed to host.
-- **API route compatibility:** Existing `API.md` documents REST conventions. The initial app can use Server Actions and Route Handlers; if a public REST API is required, implement and document compatible Route Handlers instead of creating a second backend.
+- **API route compatibility:** Existing `api.md` documents REST conventions. The initial app can use Server Actions and Route Handlers; if a public REST API is required, implement and document compatible Route Handlers instead of creating a second backend.
 
 ## 14. Documentation maintenance
 

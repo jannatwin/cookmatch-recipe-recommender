@@ -67,7 +67,7 @@ flowchart TB
 | --- | --- | --- |
 | Language | TypeScript, strict mode | Shared typed domain models and safer server/client boundaries |
 | Framework | Next.js App Router | Full-stack React app with Server Components, Server Actions and Route Handlers |
-| Styling | Tailwind CSS | Utility-first styling; use tokens/components defined in `Design.md` |
+| Styling | Tailwind CSS | Utility-first styling; use tokens/components defined in `design.md` |
 | Database | Supabase PostgreSQL | Relational model with migrations, constraints and Row Level Security |
 | Authentication | Supabase Auth with `@supabase/ssr` | Cookie-based sessions for Next.js; no custom password table/JWT issuer |
 | Hosting | Vercel (app) and Supabase (data/Auth) | Integrated deployment and managed Postgres |
