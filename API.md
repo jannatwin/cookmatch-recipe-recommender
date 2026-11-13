@@ -106,10 +106,10 @@ Paginated responses include:
 | 7 | POST | `/pantry/items` | Add one ingredient | User | FR-5, FR-6 |
 | 8 | PATCH | `/pantry/items/{ingredientId}` | Update an expiry date | User | FR-6 |
 | 9 | DELETE | `/pantry/items/{ingredientId}` | Remove one ingredient | User | FR-5 |
-| 10 | GET | `/recommendations` | Ranked recipes for the pantry | User | FR-8 to FR-16 |
-| 11 | GET | `/recipes/{id}` | Full recipe details | User | FR-17, FR-18 |
-| 12 | GET | `/cuisines` | List cuisines (for filters) | User | FR-15 |
-| 13 | GET | `/dietary-tags` | List dietary tags (for filters) | User | FR-15 |
+| 10 | GET | `/recommendations` | Ranked recipes for the pantry (guests: unranked published catalog) | Public | FR-8 to FR-16 |
+| 11 | GET | `/recipes/{id}` | Full recipe details | Public | FR-17, FR-18 |
+| 12 | GET | `/cuisines` | List cuisines (for filters) | Public | FR-15 |
+| 13 | GET | `/dietary-tags` | List dietary tags (for filters) | Public | FR-15 |
 | 14 | POST | `/recipes` | Create a recipe | Admin | FR-20 |
 | 15 | PUT | `/recipes/{id}` | Update a recipe | Admin | FR-20 |
 | 16 | DELETE | `/recipes/{id}` | Delete a recipe | Admin | FR-20 |
@@ -358,7 +358,9 @@ Errors: `404 NOT_FOUND`.
 
 ### 5.1 Get ranked recipes
 
-`GET /recommendations`  ·  User
+`GET /recommendations`  ·  Public
+
+Without a session the response has `"guest": true` and lists every published recipe that passes the cuisine, time and diet filters, quickest first, with `matchScore` 0 (there is no pantry to rank against).
 
 Ranks recipes using the logged-in user's current pantry. Recipes are sorted by match score (highest first), then by the number of expiring ingredients used (highest first), then by cooking time (shortest first).
 
@@ -432,9 +434,9 @@ Field notes:
 | `expiringCount` | How many of the matched ingredients are close to expiry |
 | `missingIngredients` | Missing items with substitutes, when any exist |
 
-Errors: `400 VALIDATION_ERROR` (bad filter value), `401 TOKEN_INVALID`.
+Errors: `400 VALIDATION_ERROR` (bad filter value).
 
-An empty pantry returns `200 OK` with an empty `data` array and a `hint` field:
+For a signed-in user, an empty pantry returns `200 OK` with an empty `data` array and a `hint` field:
 
 ```json
 { "data": [], "hint": "Add ingredients to your pantry to get recommendations" }
@@ -446,7 +448,7 @@ An empty pantry returns `200 OK` with an empty `data` array and a `hint` field:
 
 ### 6.1 Get recipe details
 
-`GET /recipes/{id}`  ·  User
+`GET /recipes/{id}`  ·  Public (guests get `"guest": true` and every ingredient with `inPantry: false`)
 
 Returns the full recipe. If the user has a pantry, the response also marks which ingredients the user has and which are missing.
 
@@ -483,7 +485,7 @@ Administrators can also open unpublished recipes here to preview a draft; other 
 
 ### 6.2 List cuisines
 
-`GET /cuisines`  ·  User
+`GET /cuisines`  ·  Public
 
 ```json
 { "data": [ { "cuisineId": 1, "name": "Bangladeshi" }, { "cuisineId": 2, "name": "Italian" } ] }
@@ -491,7 +493,7 @@ Administrators can also open unpublished recipes here to preview a draft; other 
 
 ### 6.3 List dietary tags
 
-`GET /dietary-tags`  ·  User
+`GET /dietary-tags`  ·  Public
 
 ```json
 { "data": [ { "tagId": 1, "name": "Vegetarian" }, { "tagId": 2, "name": "Vegan" }, { "tagId": 3, "name": "Halal" } ] }

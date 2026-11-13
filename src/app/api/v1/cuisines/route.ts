@@ -1,5 +1,5 @@
 import { ApiError, apiErrorResponse } from "@/lib/api/errors";
-import { requireAdmin, requireUser } from "@/lib/auth/require-user";
+import { optionalUser, requireAdmin } from "@/lib/auth/require-user";
 import { parseJson } from "@/lib/validation/api";
 import { z } from "zod";
 
@@ -7,7 +7,7 @@ const bodySchema = z.object({ name: z.string().trim().min(1).max(50) });
 
 export async function GET() {
   try {
-    const { supabase } = await requireUser();
+    const { supabase } = await optionalUser();
     const { data, error } = await supabase.from("cuisines").select("id,name").order("name");
     if (error) throw new ApiError(500, "SERVER_ERROR", "Could not load cuisines");
     return Response.json({ data: data.map(({ id, name }) => ({ cuisineId: id, name })) });

@@ -22,6 +22,7 @@ export type RecipeSummary = {
   almostAchievable?: boolean;
   missingIngredients: MissingIngredient[];
   providerLabel?: string;
+  guest?: boolean; // no pantry to compare against: hide match details
 };
 
 export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
@@ -32,10 +33,10 @@ export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
         <div className="relative h-48 sm:h-52">
           <div className="absolute inset-0 transition duration-300 group-hover:scale-[1.03] motion-reduce:transition-none"><RecipeImage src={recipe.imageUrl} alt={recipe.title} className="size-full" /></div>
           <div className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1.5 text-xs font-black shadow-sm">{recipe.providerLabel ?? "CookMatch recipe"}</div>
-          <div className={`absolute right-3 top-3 min-w-14 rounded-2xl border-2 px-2.5 py-2 text-center shadow-sm ${matched ? "border-[#71ad87] bg-mint" : "border-[#d5a461] bg-butter"}`}>
+          {!recipe.guest && <div className={`absolute right-3 top-3 min-w-14 rounded-2xl border-2 px-2.5 py-2 text-center shadow-sm ${matched ? "border-[#71ad87] bg-mint" : "border-[#d5a461] bg-butter"}`}>
             <span className="block text-lg font-black leading-none">{Math.round(recipe.matchScore)}%</span><span className="mt-1 block text-[9px] font-extrabold uppercase tracking-wide">match</span>
-          </div>
-          {recipe.almostAchievable && <div className="absolute bottom-3 left-3 rounded-full bg-butter px-3 py-1.5 text-xs font-extrabold shadow-sm">Almost there · {recipe.missingCount} missing</div>}
+          </div>}
+          {!recipe.guest && recipe.almostAchievable && <div className="absolute bottom-3 left-3 rounded-full bg-butter px-3 py-1.5 text-xs font-extrabold shadow-sm">Almost there · {recipe.missingCount} missing</div>}
         </div>
         <div className="p-5">
           <div className="flex items-start justify-between gap-3">
@@ -44,14 +45,14 @@ export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
             </p></div>
             <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-coral/25 text-lg transition group-hover:bg-coral">→</span>
           </div>
-          <div className="mt-4 flex items-center gap-2 text-sm font-bold">
+          {recipe.guest ? <p className="mt-4 text-sm font-bold"><span className="rounded-full bg-mint px-3 py-1">{recipe.requiredCount} ingredient{recipe.requiredCount === 1 ? "" : "s"}</span></p> : <><div className="mt-4 flex items-center gap-2 text-sm font-bold">
             <span className="rounded-full bg-mint px-3 py-1">Have {recipe.haveCount}/{recipe.requiredCount}</span>
             <span className={`rounded-full px-3 py-1 ${recipe.missingCount ? "bg-peach" : "bg-[#e8f6eb]"}`}>{recipe.missingCount ? `Missing ${recipe.missingCount}` : "All ingredients"}</span>
           </div>
           {recipe.missingIngredients.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">
             {recipe.missingIngredients.slice(0, 3).map((item) => <span key={`${item.ingredientId ?? item.name}-${item.name}`} className="rounded-full bg-[#fff0ed] px-2.5 py-1 text-xs font-bold text-[#793d32]">{item.name}{item.substitutes?.[0] && <span className="font-semibold text-[#5f516f]"> · or use {item.substitutes[0].name}</span>}</span>)}
             {recipe.missingIngredients.length > 3 && <span className="px-1 py-1 text-xs font-bold text-[#765b4d]">+{recipe.missingIngredients.length - 3} more</span>}
-          </div>}
+          </div>}</>}
           {recipe.expiringCount ? <p className="mt-3 text-xs font-bold text-[#765b4d]">◷ Uses {recipe.expiringCount} ingredient{recipe.expiringCount === 1 ? "" : "s"} expiring soon</p> : null}
           {recipe.dietaryTags && recipe.dietaryTags.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">{recipe.dietaryTags.slice(0, 3).map((tag) => <span key={tag} className="rounded-full bg-lavender/60 px-2.5 py-1 text-[11px] font-bold">{tag}</span>)}</div>}
         </div>

@@ -34,7 +34,7 @@ export default function HomePage() {
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href="/register" className={buttonPrimary}>Build my pantry <span aria-hidden="true" className="ml-2">→</span></Link>
-            <Link href="/login" className={buttonSecondary}>I already have an account</Link>
+            <Link href="/recipes" className={buttonSecondary}>Browse recipes</Link>
           </div>
           <p className="mt-5 text-sm font-semibold text-[#8b7061]">A little less food waste. A lot more dinner inspiration.</p>
         </div>

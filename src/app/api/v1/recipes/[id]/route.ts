@@ -1,5 +1,5 @@
 import { ApiError, apiErrorResponse } from "@/lib/api/errors";
-import { requireAdmin, requireUser } from "@/lib/auth/require-user";
+import { optionalUser, requireAdmin } from "@/lib/auth/require-user";
 import { parseJson } from "@/lib/validation/api";
 import { recipeInputSchema, toRecipeRpcInput } from "@/lib/validation/recipe";
 import { matchScore } from "@/server/services/matching";
@@ -9,7 +9,7 @@ type Context = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, context: Context) {
   try {
-    const { supabase, user } = await requireUser();
+    const { supabase, user } = await optionalUser();
     const parsedId = z.coerce.number().int().positive().safeParse((await context.params).id);
     if (!parsedId.success) throw new ApiError(400, "VALIDATION_ERROR", "Recipe ID is invalid");
     const recipeId = parsedId.data;
@@ -26,7 +26,9 @@ export async function GET(_request: Request, context: Context) {
       supabase.from("recipe_ingredients").select("ingredient_id,display_name").eq("recipe_id", recipeId),
       supabase.from("recipe_steps").select("step_number,instruction").eq("recipe_id", recipeId).order("step_number"),
       supabase.from("recipe_dietary_tags").select("tag_id").eq("recipe_id", recipeId),
-      supabase.from("pantry_items").select("ingredient_id").eq("user_id", user.id),
+      user
+        ? supabase.from("pantry_items").select("ingredient_id").eq("user_id", user.id)
+        : Promise.resolve({ data: [], error: null }),
       recipe.cuisine_id
         ? supabase.from("cuisines").select("name").eq("id", recipe.cuisine_id).maybeSingle()
         : Promise.resolve({ data: null, error: null }),
@@ -82,6 +84,7 @@ export async function GET(_request: Request, context: Context) {
     const requiredCount = recipeIngredients.length;
     const haveCount = recipeIngredients.filter((ingredient) => ingredient.inPantry).length;
     return Response.json({
+      guest: !user,
       recipeId: recipe.id,
       title: recipe.title,
       description: recipe.description,

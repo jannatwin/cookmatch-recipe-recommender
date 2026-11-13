@@ -22,6 +22,7 @@ type RecipeDetailData = {
   steps: Array<{ stepNumber: number; instruction: string }>;
   matchScore: number;
   missingCount: number;
+  guest?: boolean;
 };
 
 export function RecipeDetail({ source, id }: { source: "cookmatch" | "spoonacular"; id: string }) {
@@ -56,8 +57,8 @@ export function RecipeDetail({ source, id }: { source: "cookmatch" | "spoonacula
             <h1 className="mt-3 text-3xl font-black leading-tight tracking-tight sm:text-4xl">{recipe.title}</h1>
             {recipe.description && <p className="mt-4 leading-7 text-[#765b4d]">{recipe.description}</p>}
             <div className="mt-5 flex flex-wrap gap-2 text-sm font-bold">
-              <span className="rounded-full bg-mint px-3 py-2">{Math.round(recipe.matchScore)}% pantry match</span>
-              {recipe.missingCount > 0 && <span className="rounded-full bg-peach px-3 py-2">{recipe.missingCount} missing</span>}
+              {!recipe.guest && <span className="rounded-full bg-mint px-3 py-2">{Math.round(recipe.matchScore)}% pantry match</span>}
+              {!recipe.guest && recipe.missingCount > 0 && <span className="rounded-full bg-peach px-3 py-2">{recipe.missingCount} missing</span>}
               {recipe.cookingTimeMin && <span className="rounded-full bg-butter px-3 py-2">{recipe.cookingTimeMin} min</span>}
               {recipe.cuisine && <span className="rounded-full bg-lavender px-3 py-2">{recipe.cuisine}</span>}
             </div>
@@ -77,9 +78,9 @@ export function RecipeDetail({ source, id }: { source: "cookmatch" | "spoonacula
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
         <Panel>
-          <div className="mb-5 flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.15em] text-[#8b604d]">Gather these</p><h2 className="mt-1 text-2xl font-black">Ingredients</h2></div><span className="rounded-full bg-mint px-3 py-1.5 text-sm font-black">{recipe.ingredients.filter((item) => item.inPantry).length}/{recipe.ingredients.length} have</span></div>
+          <div className="mb-5 flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.15em] text-[#8b604d]">Gather these</p><h2 className="mt-1 text-2xl font-black">Ingredients</h2></div>{recipe.guest ? <Link href={`/login?next=${encodeURIComponent(`/recipes/${id}`)}`} className="text-sm font-bold underline underline-offset-4 focus-visible:outline-4 focus-visible:outline-cocoa">Sign in to check your pantry</Link> : <span className="rounded-full bg-mint px-3 py-1.5 text-sm font-black">{recipe.ingredients.filter((item) => item.inPantry).length}/{recipe.ingredients.length} have</span>}</div>
           {recipe.ingredients.length ? <ul className="space-y-3">{recipe.ingredients.map((item, index) => <li key={`${item.ingredientId ?? item.name}-${index}`} className="rounded-2xl bg-cream/80 p-3.5">
-            <div className="flex items-start gap-3"><span aria-hidden="true" className={`mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-xs font-black ${item.inPantry ? "bg-mint" : "bg-peach"}`}>{item.inPantry ? "✓" : "·"}</span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-baseline justify-between gap-x-3"><span className="font-bold">{item.name}</span><span className="text-xs font-medium text-[#765b4d]">{item.amount}{item.unit ? ` ${item.unit}` : ""}</span></div><span className={`mt-1 block text-xs font-bold ${item.inPantry ? "text-[#477456]" : "text-[#8b493d]"}`}>{item.inPantry ? "In your pantry" : "Missing"}</span>
+            <div className="flex items-start gap-3"><span aria-hidden="true" className={`mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-xs font-black ${item.inPantry ? "bg-mint" : "bg-peach"}`}>{item.inPantry ? "✓" : "·"}</span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-baseline justify-between gap-x-3"><span className="font-bold">{item.name}</span><span className="text-xs font-medium text-[#765b4d]">{item.amount}{item.unit ? ` ${item.unit}` : ""}</span></div>{!recipe.guest && <span className={`mt-1 block text-xs font-bold ${item.inPantry ? "text-[#477456]" : "text-[#8b493d]"}`}>{item.inPantry ? "In your pantry" : "Missing"}</span>}
               {!item.inPantry && item.substitutes?.map((substitute) => <p key={substitute.ingredientId} className="mt-2 rounded-xl bg-lavender/50 px-3 py-2 text-xs leading-5"><strong>Possible substitute: {substitute.name}.</strong>{substitute.note ? ` ${substitute.note}` : ""}</p>)}
             </div></div>
           </li>)}</ul> : <p className="text-sm text-[#765b4d]">Ingredient information is not available for this recipe.</p>}

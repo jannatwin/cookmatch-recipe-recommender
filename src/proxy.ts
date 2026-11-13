@@ -3,7 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/database";
 import { getPublicSupabaseEnv } from "@/lib/env";
 
-const protectedPrefixes = ["/pantry", "/recipes", "/admin", "/provider-recipes"];
+// /recipes is public: guests browse the catalog; pantry matching needs an account.
+const protectedPrefixes = ["/pantry", "/admin", "/provider-recipes"];
 
 export async function proxy(request: NextRequest) {
   const nonce = btoa(crypto.randomUUID());

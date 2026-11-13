@@ -1,7 +1,7 @@
 -- Role and row-level access checks (NFR-7, ST-4, ST-5).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(18);
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-0000000000a1', 'a@access.local'),
@@ -54,8 +54,18 @@ select isnt_empty($$ select 1 from public.recipes where source_id = 'access-draf
 
 set local role anon;
 set local request.jwt.claims = '{"role": "anon"}';
-select throws_ok($$ select * from public.get_recommendations() $$, '42501', null, 'anonymous cannot call recommendations');
-select is_empty($$ select 1 from public.ingredients $$, 'anonymous sees no catalog rows');
+select is_empty($$ select 1 from public.recipes where source_id = 'access-draft' $$, 'anonymous cannot see an unpublished recipe');
+select isnt_empty($$ select 1 from public.ingredients $$, 'anonymous can read the public catalog');
+select is_empty($$ select 1 from public.pantry_items $$, 'anonymous cannot read any pantry');
+select throws_ok(
+  $$ insert into public.ingredients (name, normalized_name) values ('X', 'access_x') $$,
+  '42501', null, 'anonymous cannot write catalog rows'
+);
+select throws_ok($$ select public.create_recipe('{}'::jsonb) $$, '42501', null, 'anonymous cannot create a recipe');
+select is(
+  (select count(*) from public.get_recommendations() where title = 'Access draft'), 0::bigint,
+  'anonymous recommendations exclude unpublished recipes'
+);
 
 select * from finish();
 rollback;
