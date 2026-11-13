@@ -71,6 +71,8 @@ Stop the local stack with `npm run supabase:stop`. Never commit `.env.local`, Su
 
 `supabase/seeds/leftover_recipes.sql` adds 100 CookMatch-owned recipes built around food that often goes to waste. It is not part of `npm run db:reset`, so the fixed test fixture in `Testing & QA.md` stays unchanged. To load it, run the file in the Supabase SQL editor after the migrations; it is safe to run more than once.
 
+`supabase/seeds/world_recipes.sql` adds another 100 CookMatch-owned recipes, 20 each for Bangladeshi, Indian, Chinese, Mexican and Thai cooking, plus the ingredients and aliases they need. It loads the same way and does not depend on the leftover seed.
+
 To regenerate Supabase TypeScript types after changing the schema, run `npm run db:types`. To make a local account an admin, sign up through the app and update that account's `profiles.role` with the local Supabase SQL editor; public registration never grants admin access.
 
 ## Environment configuration
