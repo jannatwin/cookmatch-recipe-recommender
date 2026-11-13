@@ -101,6 +101,7 @@ Paginated responses include:
 | 2 | POST | `/auth/login` | Log in and establish a Supabase session | Public | FR-2, FR-3 |
 | 3 | POST | `/auth/logout` | Log out | User | FR-2 |
 | 4 | GET | `/ingredients/search` | Ingredient name suggestions | User | FR-4, FR-7 |
+| 4a | GET | `/ingredients` | All ingredients used by published recipes: `{ "data": [{ "ingredientId", "name" }] }`, sorted by name | User | FR-4 |
 | 5 | GET | `/pantry` | Get the user's pantry | User | FR-5 |
 | 6 | PUT | `/pantry` | Replace the user's pantry | User | FR-4, FR-5, FR-6, FR-7 |
 | 7 | POST | `/pantry/items` | Add one ingredient | User | FR-5, FR-6 |
