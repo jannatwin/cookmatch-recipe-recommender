@@ -11,11 +11,16 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
     throw new Error("The server returned an unreadable response. Please try again.");
   }
   if (!response.ok) {
-    const message = typeof body === "object" && body !== null && "error" in body
-      && typeof body.error === "object" && body.error !== null && "message" in body.error
-      && typeof body.error.message === "string"
-      ? body.error.message
-      : "Something went wrong. Please try again.";
+    const message =
+      typeof body === "object" &&
+      body !== null &&
+      "error" in body &&
+      typeof body.error === "object" &&
+      body.error !== null &&
+      "message" in body.error &&
+      typeof body.error.message === "string"
+        ? body.error.message
+        : "Something went wrong. Please try again.";
     throw new Error(message);
   }
   return body as T;

@@ -8,9 +8,13 @@ async function addIngredient(page: Page, text: string, expiry?: string) {
   await page.getByRole("button", { name: "Add to pantry" }).click();
 }
 
-test("main journey: register, pantry, recommendations, recipe, cooking, sign out", async ({ page }, testInfo) => {
+test("main journey: register, pantry, recommendations, recipe, cooking, sign out", async ({
+  page,
+}, testInfo) => {
   const errors: string[] = [];
-  page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
 
   // Signed-out visitors are sent to sign in, and a broken confirmation link is explained.
   await page.goto("/pantry");
@@ -45,7 +49,9 @@ test("main journey: register, pantry, recommendations, recipe, cooking, sign out
   // Several at once: the known ones are added, the unknown one stays in the box to fix.
   await addIngredient(page, "Oil, salt, qqqq");
   await expect(page.locator("p[role=status]").filter({ hasText: "Oil, Salt added" })).toBeVisible();
-  await expect(page.locator("p[role=alert]")).toContainText("‘qqqq’ was not recognized".replace(/[‘’]/g, "'"));
+  await expect(page.locator("p[role=alert]")).toContainText(
+    "‘qqqq’ was not recognized".replace(/[‘’]/g, "'"),
+  );
   await expect(page.getByLabel("Ingredients", { exact: true })).toHaveValue("qqqq");
   await expect(page.getByText("Use soon: 1")).toBeVisible();
   await page.getByLabel("Ingredients", { exact: true }).fill("zzzz");
@@ -62,7 +68,9 @@ test("main journey: register, pantry, recommendations, recipe, cooking, sign out
   await expect(friedRice).toContainText("60%");
   await expect(friedRice).toContainText("Almost there · 2 missing");
   await expect(friedRice).toContainText("Butter · or use Oil");
-  await expect(page.locator("article", { hasText: "Tomato Egg Curry" })).toContainText("Uses 1 ingredient expiring soon");
+  await expect(page.locator("article", { hasText: "Tomato Egg Curry" })).toContainText(
+    "Uses 1 ingredient expiring soon",
+  );
 
   // Filters combine and keep the order.
   await page.getByLabel("Cuisine").selectOption({ label: "Italian" });

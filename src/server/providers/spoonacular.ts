@@ -1,7 +1,12 @@
 import "server-only";
 
 import { z } from "zod";
-import { ProviderError, type ProviderRecipeDetail, type ProviderRecipeSummary, type RecipeProvider } from "./contracts";
+import {
+  ProviderError,
+  type ProviderRecipeDetail,
+  type ProviderRecipeSummary,
+  type RecipeProvider,
+} from "./contracts";
 
 const ingredientSchema = z.object({
   name: z.string(),
@@ -10,13 +15,15 @@ const ingredientSchema = z.object({
   unit: z.string().optional(),
 });
 
-const spoonacularSummarySchema = z.array(z.object({
-  id: z.number().int(),
-  title: z.string(),
-  image: z.string().nullable().optional(),
-  usedIngredients: z.array(ingredientSchema).default([]),
-  missedIngredients: z.array(ingredientSchema).default([]),
-}));
+const spoonacularSummarySchema = z.array(
+  z.object({
+    id: z.number().int(),
+    title: z.string(),
+    image: z.string().nullable().optional(),
+    usedIngredients: z.array(ingredientSchema).default([]),
+    missedIngredients: z.array(ingredientSchema).default([]),
+  }),
+);
 
 const spoonacularDetailSchema = z.object({
   id: z.number().int(),
@@ -28,9 +35,13 @@ const spoonacularDetailSchema = z.object({
   cuisines: z.array(z.string()).default([]),
   diets: z.array(z.string()).default([]),
   extendedIngredients: z.array(ingredientSchema).default([]),
-  analyzedInstructions: z.array(z.object({
-    steps: z.array(z.object({ step: z.string() })).default([]),
-  })).default([]),
+  analyzedInstructions: z
+    .array(
+      z.object({
+        steps: z.array(z.object({ step: z.string() })).default([]),
+      }),
+    )
+    .default([]),
 });
 
 function getApiKey() {
@@ -66,16 +77,19 @@ export const spoonacularProvider: RecipeProvider = {
     url.searchParams.set("ignorePantry", "false");
 
     const parsed = spoonacularSummarySchema.safeParse(await requestJson(url));
-    if (!parsed.success) throw new ProviderError("Spoonacular returned an unexpected response", "invalid_response");
-    return parsed.data.map((recipe): ProviderRecipeSummary => ({
-      provider: "spoonacular",
-      sourceId: String(recipe.id),
-      title: recipe.title,
-      imageUrl: recipe.image ?? null,
-      usedIngredientNames: recipe.usedIngredients.map((ingredient) => ingredient.name),
-      missingIngredientNames: recipe.missedIngredients.map((ingredient) => ingredient.name),
-      sourceUrl: null,
-    }));
+    if (!parsed.success)
+      throw new ProviderError("Spoonacular returned an unexpected response", "invalid_response");
+    return parsed.data.map(
+      (recipe): ProviderRecipeSummary => ({
+        provider: "spoonacular",
+        sourceId: String(recipe.id),
+        title: recipe.title,
+        imageUrl: recipe.image ?? null,
+        usedIngredientNames: recipe.usedIngredients.map((ingredient) => ingredient.name),
+        missingIngredientNames: recipe.missedIngredients.map((ingredient) => ingredient.name),
+        sourceUrl: null,
+      }),
+    );
   },
 
   async getRecipe(sourceId) {
@@ -83,7 +97,8 @@ export const spoonacularProvider: RecipeProvider = {
     const url = new URL(`https://api.spoonacular.com/recipes/${sourceId}/information`);
     url.searchParams.set("apiKey", getApiKey());
     const parsed = spoonacularDetailSchema.safeParse(await requestJson(url));
-    if (!parsed.success) throw new ProviderError("Spoonacular returned an unexpected response", "invalid_response");
+    if (!parsed.success)
+      throw new ProviderError("Spoonacular returned an unexpected response", "invalid_response");
     const recipe = parsed.data;
     const ingredients = recipe.extendedIngredients.map((ingredient) => ({
       name: ingredient.name,

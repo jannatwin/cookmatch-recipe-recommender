@@ -127,6 +127,9 @@ Status values: Not run, Pass, Fail, Blocked. Priority: High, Medium, Low.
 | TC-007 | FR-3 | Log in with unknown email | Send an unregistered email | Status 401 `INVALID_CREDENTIALS`, same message as TC-006 | High |
 | TC-008 | FR-2 | Log out | Sign out using the authenticated session | Session cleared; user returns to login page | Medium |
 | TC-009 | NFR-7 | Access protected page without session | Request pantry with no Supabase session | Redirect or 401; no pantry data returned | High |
+| TC-009a | FR-22 | Guest browses recipes | Open `/recipes` and a recipe with no session | Published recipes and details load; no match score, pantry or saved data; `/pantry` and `/saved` redirect to sign-in (`e2e/guest-and-saved.spec.ts`) | High |
+| TC-009b | FR-23 | Save and unsave a recipe | Save from recipe details, open `/saved`, then unsave | Recipe appears under Saved only for that user, then disappears (`e2e/guest-and-saved.spec.ts`, `supabase/tests/favorites_test.sql`) | Medium |
+| TC-009c | NFR-7 | Guest request limit | Call the guest limiter as anon, as a user and as the server | Only the server role may call it; requests beyond the per-minute limit are refused (`supabase/tests/favorites_test.sql`) | Medium |
 | TC-010 | NFR-7 | Use an expired session | Request pantry with expired Supabase session | Refresh flow or sign-in redirect; no private data returned | Medium |
 
 ### 5.2 Ingredient input and pantry (FR-4 to FR-7)

@@ -2,7 +2,10 @@ import { ApiError, apiErrorResponse } from "@/lib/api/errors";
 import { requireAdmin } from "@/lib/auth/require-user";
 import { z } from "zod";
 
-const paramsSchema = z.object({ id: z.coerce.number().int().positive(), aliasId: z.coerce.number().int().positive() });
+const paramsSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  aliasId: z.coerce.number().int().positive(),
+});
 type Context = { params: Promise<{ id: string; aliasId: string }> };
 
 export async function DELETE(_request: Request, context: Context) {

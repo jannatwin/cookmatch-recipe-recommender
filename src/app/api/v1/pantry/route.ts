@@ -2,7 +2,11 @@ import { ApiError, apiErrorResponse } from "@/lib/api/errors";
 import { requireUser } from "@/lib/auth/require-user";
 import { listPantry, replacePantry } from "@/server/services/pantry";
 import { parseJson, replacePantrySchema } from "@/lib/validation/api";
-import { normalizeIngredientName, resolveIngredient, resolveIngredientNames } from "@/server/services/ingredients";
+import {
+  normalizeIngredientName,
+  resolveIngredient,
+  resolveIngredientNames,
+} from "@/server/services/ingredients";
 
 export async function GET() {
   try {
@@ -19,17 +23,18 @@ export async function PUT(request: Request) {
     const input = await parseJson(request, replacePantrySchema);
     const names = input.items.flatMap((item) => (item.name ? [item.name] : []));
     const resolvedNames = names.length ? await resolveIngredientNames(supabase, names) : new Map();
-    const unknown = input.items.flatMap((item, index) => (
-      item.name && !resolvedNames.has(normalizeIngredientName(item.name))
-        ? [{ name: item.name, index }]
-        : []
-    ));
+    const unknown = input.items.flatMap((item, index) =>
+      item.name && !resolvedNames.has(normalizeIngredientName(item.name)) ? [{ name: item.name, index }] : [],
+    );
     if (unknown.length) {
       throw new ApiError(
         422,
         "UNKNOWN_INGREDIENT",
         "Some ingredients were not recognized",
-        unknown.map(({ name, index }) => ({ field: `items[${index}].name`, issue: `no ingredient or alias matches '${name}'` })),
+        unknown.map(({ name, index }) => ({
+          field: `items[${index}].name`,
+          issue: `no ingredient or alias matches '${name}'`,
+        })),
       );
     }
 

@@ -68,7 +68,12 @@ export async function parseJson<T extends z.ZodType>(request: Request, schema: T
 
   const result = schema.safeParse(body);
   if (!result.success) {
-    throw new ApiError(400, "VALIDATION_ERROR", "The request contains invalid fields", zodDetails(result.error));
+    throw new ApiError(
+      400,
+      "VALIDATION_ERROR",
+      "The request contains invalid fields",
+      zodDetails(result.error),
+    );
   }
   return result.data;
 }

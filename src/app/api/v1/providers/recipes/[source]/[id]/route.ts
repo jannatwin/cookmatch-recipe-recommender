@@ -9,7 +9,10 @@ import { matchScore } from "@/server/services/matching";
 import { ProviderError } from "@/server/providers/contracts";
 import { enforceSpoonacularLimit } from "@/server/providers/rate-limit";
 
-const paramsSchema = z.object({ source: z.enum(["themealdb", "spoonacular"]), id: z.string().min(1).max(100) });
+const paramsSchema = z.object({
+  source: z.enum(["themealdb", "spoonacular"]),
+  id: z.string().min(1).max(100),
+});
 type Context = { params: Promise<{ source: string; id: string }> };
 
 export async function GET(_request: Request, context: Context) {
@@ -24,13 +27,18 @@ export async function GET(_request: Request, context: Context) {
 
     const [pantry, resolved] = await Promise.all([
       listPantry(supabase, user.id),
-      resolveIngredientNames(supabase, recipe.ingredients.map((ingredient) => ingredient.name)),
+      resolveIngredientNames(
+        supabase,
+        recipe.ingredients.map((ingredient) => ingredient.name),
+      ),
     ]);
     const pantryIds = new Set(pantry.map((item) => item.ingredientId));
     const pantryNames = new Set(pantry.map((item) => normalizeIngredientName(item.name)));
     const ingredients = recipe.ingredients.map((ingredient) => {
       const match = resolved.get(normalizeIngredientName(ingredient.name));
-      const inPantry = match ? pantryIds.has(match.id) : pantryNames.has(normalizeIngredientName(ingredient.name));
+      const inPantry = match
+        ? pantryIds.has(match.id)
+        : pantryNames.has(normalizeIngredientName(ingredient.name));
       return {
         ingredientId: match?.id ?? null,
         name: ingredient.name,
@@ -39,12 +47,24 @@ export async function GET(_request: Request, context: Context) {
         inPantry,
       };
     });
-    const requiredKeys = new Set(ingredients.map((ingredient) => (
-      ingredient.ingredientId === null ? `name:${normalizeIngredientName(ingredient.name)}` : `id:${ingredient.ingredientId}`
-    )));
-    const haveKeys = new Set(ingredients.flatMap((ingredient) => ingredient.inPantry
-      ? [ingredient.ingredientId === null ? `name:${normalizeIngredientName(ingredient.name)}` : `id:${ingredient.ingredientId}`]
-      : []));
+    const requiredKeys = new Set(
+      ingredients.map((ingredient) =>
+        ingredient.ingredientId === null
+          ? `name:${normalizeIngredientName(ingredient.name)}`
+          : `id:${ingredient.ingredientId}`,
+      ),
+    );
+    const haveKeys = new Set(
+      ingredients.flatMap((ingredient) =>
+        ingredient.inPantry
+          ? [
+              ingredient.ingredientId === null
+                ? `name:${normalizeIngredientName(ingredient.name)}`
+                : `id:${ingredient.ingredientId}`,
+            ]
+          : [],
+      ),
+    );
     const haveCount = haveKeys.size;
     return Response.json({
       source: recipe.provider,

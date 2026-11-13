@@ -26,11 +26,14 @@ export async function POST(request: Request) {
     if (error?.code === "23505") throw new ApiError(409, "DUPLICATE", "Substitute mapping already exists");
     if (error?.code === "23503") throw new ApiError(404, "NOT_FOUND", "Ingredient was not found");
     if (error) throw new ApiError(400, "VALIDATION_ERROR", "Could not create substitute mapping");
-    return Response.json({
-      ingredientId: input.ingredientId,
-      substituteId: input.substituteId,
-      note: input.note || null,
-    }, { status: 201 });
+    return Response.json(
+      {
+        ingredientId: input.ingredientId,
+        substituteId: input.substituteId,
+        note: input.note || null,
+      },
+      { status: 201 },
+    );
   } catch (error) {
     return apiErrorResponse(error);
   }
@@ -39,7 +42,10 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const { supabase } = await requireAdmin();
-    const input = await parseJson(request, mappingBaseSchema.pick({ ingredientId: true, substituteId: true }));
+    const input = await parseJson(
+      request,
+      mappingBaseSchema.pick({ ingredientId: true, substituteId: true }),
+    );
     const { data, error } = await supabase
       .from("substitutes")
       .delete()

@@ -71,6 +71,7 @@ src/
     (app)/pantry/page.tsx
     (app)/recipes/page.tsx
     (app)/recipes/[id]/page.tsx
+    (app)/saved/page.tsx
     (app)/provider-recipes/[source]/[id]/page.tsx
     (app)/admin/page.tsx
     auth/callback/route.ts

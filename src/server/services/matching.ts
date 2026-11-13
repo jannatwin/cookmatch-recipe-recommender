@@ -21,6 +21,8 @@ export function isAlmostAchievable(missingCount: number) {
 export function isExpiringSoon(expiryDate: string | null, now = new Date()) {
   if (!expiryDate) return false;
   const today = now.toISOString().slice(0, 10);
-  const limit = new Date(now.getTime() + EXPIRY_WARNING_DAYS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const limit = new Date(now.getTime() + EXPIRY_WARNING_DAYS * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
   return expiryDate >= today && expiryDate <= limit;
 }

@@ -14,7 +14,9 @@
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "db:reset": "supabase db reset",
-    "db:push": "supabase db push"
+    "db:push": "supabase db push",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"e2e/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"e2e/**/*.ts\""
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -33,6 +35,7 @@
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.4.3",
     "postcss": "^8.5.32",
+    "prettier": "3.6.2",
     "supabase": "^2.122.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3"

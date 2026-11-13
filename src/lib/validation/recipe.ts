@@ -9,11 +9,17 @@ export const recipeInputSchema = z.object({
   description: z.string().trim().max(5000).optional().default(""),
   cuisineId: z.number().int().positive().nullable().optional(),
   cookingTimeMin: z.coerce.number().int().positive().max(1440),
-  imageUrl: z.union([z.url(), z.literal("")]).optional().default(""),
+  imageUrl: z
+    .union([z.url(), z.literal("")])
+    .optional()
+    .default(""),
   isPublished: z.boolean().default(false),
   dietaryTagIds: idList.default([]),
   ingredientIds: idList.min(1),
-  steps: z.array(z.object({ instruction: z.string().trim().min(1).max(5000) })).min(1).max(100),
+  steps: z
+    .array(z.object({ instruction: z.string().trim().min(1).max(5000) }))
+    .min(1)
+    .max(100),
 });
 
 export type RecipeInput = z.infer<typeof recipeInputSchema>;
