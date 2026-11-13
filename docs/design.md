@@ -110,4 +110,4 @@ Load fonts with `next/font` where possible. Use responsive Tailwind breakpoints 
 
 ## 10. Related documents
 
-See `implementation.md` for the selected stack, `CookMatch Software Requirements Specification.md` for the required screens and behaviors, and `README.md` for setup.
+See `implementation.md` for the selected stack, `srs.md` for the required screens and behaviors, and `README.md` for setup.

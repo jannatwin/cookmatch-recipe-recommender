@@ -1,4 +1,4 @@
-// CookMatch matching rules (SRS FR-9, FR-11, FR-13; implementation.md section 7).
+// CookMatch matching rules (SRS FR-9, FR-11, FR-13; docs/implementation.md section 7).
 // Pure and import-free so the rules can change without touching UI, routes or providers.
 // The stored catalog is ranked in SQL (get_recommendations), which applies the same rules.
 

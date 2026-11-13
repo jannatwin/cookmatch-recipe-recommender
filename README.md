@@ -1,61 +1,79 @@
 # CookMatch
 
-CookMatch is a responsive recipe recommendation web application. Users enter ingredients they have at home and receive recipes ranked by ingredient match, with missing ingredients, substitutes, expiry prioritization and cooking instructions.
+**Cook with what you already have.** CookMatch is a recipe recommender: add the ingredients in your kitchen and it ranks recipes by how much of each one you can already make, shows what is missing, suggests substitutes and pushes ingredients that are about to expire to the top.
 
-## Product requirements
+**Live demo:** <https://cookmatch-recipe-recommender.vercel.app>
 
-See [CookMatch Software Requirements Specification](CookMatch%20Software%20Requirements%20Specification.md) for the authoritative behavior. The first release includes account management, pantry management, recommendations and filters, recipe details, and admin catalog management. Matching is based on ingredient presence; quantities are not considered.
+[![CI](https://github.com/jannatwin/cookmatch-recipe-recommender/actions/workflows/ci.yml/badge.svg)](https://github.com/jannatwin/cookmatch-recipe-recommender/actions/workflows/ci.yml)
 
-## Technology stack
+## Features
 
-| Area | Selected technology |
+- **Pantry**: add ingredients by name or alias (for example "piyaj" for onion), with suggestions as you type, an ingredient picker and optional expiry dates.
+- **Ranked recommendations**: every recipe gets a match score, a list of missing ingredients and possible substitutes. Recipes that use expiring ingredients rank higher.
+- **Filters**: cuisine, cooking time, dietary preference, minimum match and "almost achievable" (one or two ingredients missing).
+- **Recipe details**: photo, ingredient quantities, step-by-step cooking mode and photo credits.
+- **Guest browsing**: the recipe collection is open without an account; pantry matching and saved recipes need one.
+- **Saved recipes and recently viewed**.
+- **Admin tools**: manage recipes, ingredients, aliases and substitutes.
+
+## Tech stack
+
+| Area | Technology |
 | --- | --- |
-| Language | TypeScript (strict mode) |
-| Framework | Next.js App Router (React) |
-| Styling | Tailwind CSS, using the design tokens and accessible claymorphism guidance in `Design.md` |
-| Database | Supabase PostgreSQL |
-| Authentication | Supabase Auth with cookie-based SSR via `@supabase/ssr` |
-| Hosting | Vercel for the Next.js app; Supabase for database/Auth and optional Storage |
-| Recipe sources | TheMealDB and Spoonacular through server-only provider adapters |
+| Language | TypeScript (strict) |
+| Framework | Next.js App Router, React |
+| Styling | Tailwind CSS with theme tokens (`src/app/globals.css`) |
+| Database and auth | Supabase PostgreSQL with row-level security, Supabase Auth via `@supabase/ssr` |
+| Hosting | Vercel |
+| Tests | Node test runner, pgTAP, Playwright |
+| External recipe sources | Spoonacular and TheMealDB through server-only adapters |
 
-The current implementation instructions are in [implementation.md](implementation.md). That file supersedes older Express, plain CSS styling, local JWT, and local PostgreSQL setup examples elsewhere in the original planning docs. AI coding agents should first read [AGENTS.md](AGENTS.md).
+## Getting started
 
-## Repository structure
+Prerequisites: Node.js 20.9 or later, npm, and Docker for the local Supabase stack.
 
-```text
-src/app/(auth)/           # Sign-in and registration
-src/app/(app)/            # Pantry, recipes, provider detail and admin screens
-src/app/api/v1/           # Authenticated JSON API Route Handlers
-src/components/           # Responsive app shell and feature workspaces
-src/lib/                  # Environment, auth clients, validation and API helpers
-src/proxy.ts              # Supabase cookie refresh and request security headers
-src/server/               # Domain services and server-only provider adapters
-supabase/migrations/      # Versioned PostgreSQL schema and RLS policies
-supabase/seed.sql         # Local/demo seed data only
-supabase/seeds/           # Optional catalog data, loaded separately
+```bash
+npm install
+npm run supabase:start     # prints the local URL and keys
+cp .env.example .env.local # then fill in the values printed above
+npm run db:reset           # apply migrations and the demo seed
+npm run dev                # http://localhost:3000
 ```
 
-Follow the existing repository layout if implementation has already established one; do not create duplicate `client/` and `server/` applications.
+`http://localhost:3000/api/v1/health` confirms the backend is up. Stop the local stack with `npm run supabase:stop`.
 
-## Local setup
+### Environment variables
 
-Prerequisites: Node.js 20.9 or later, npm, Docker Desktop/Engine for local Supabase, and a Supabase project for deployment.
-
-1. Install dependencies with `npm install`.
-2. Start the local Supabase stack with `npm run supabase:start`; copy its Project URL and publishable key into `.env.local` based on `.env.example`.
-3. Apply migrations and development seed data with `npm run db:reset`.
-4. Start Next.js with `npm run dev` and open `http://localhost:3000`.
-5. Check `http://localhost:3000/api/v1/health` for the backend health route.
-
-## Tests
-
-| Suite | Command |
+| Variable | Purpose |
 | --- | --- |
-| Unit tests for the matching rules | `npm test` |
-| Database tests (ranking, filters, access rules, in `supabase/tests/`) | `npx supabase test db` |
-| End-to-end browser tests (in `e2e/`) | see below |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key (safe for the browser) |
+| `SUPABASE_SECRET_KEY` | Server-only key, used for the guest request limit and the end-to-end tests |
+| `NEXT_PUBLIC_APP_URL` | Public URL of the app, used for auth redirects |
+| `SPOONACULAR_API_KEY`, `THEMEALDB_API_KEY` | Optional recipe provider keys, server-only |
 
-The database and end-to-end tests need the local Supabase stack running. The end-to-end tests create accounts and catalog rows, so they refuse to run against anything but local Supabase. Run `npx playwright install chromium` once, then pass the local values from `npx supabase status` on the command line (they override `.env.local` for that run only):
+Never commit `.env.local` or any secret key. Use separate values for local development, Vercel previews and production, and add each environment's auth callback URL in Supabase.
+
+## Scripts
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` / `build` / `start` | Develop, build and serve the app |
+| `npm run lint` / `typecheck` | ESLint and TypeScript checks |
+| `npm run format` / `format:check` | Prettier: rewrite files, or check only (CI) |
+| `npm test` | Unit tests |
+| `npm run test:e2e` | Playwright end-to-end tests (local Supabase only) |
+| `npm run db:reset` / `db:push` / `db:types` | Reset the local database, push migrations to the linked project, regenerate types |
+
+## Testing
+
+| Suite | Command | Covers |
+| --- | --- | --- |
+| Unit | `npm test` | Matching rules and small helpers |
+| Database (pgTAP) | `npx supabase test db` | Ranking, filters, row-level security, saved recipes, guest limit |
+| End-to-end | `npm run test:e2e` | Register, pantry, recommendations, cooking, guest browsing, saved recipes, admin |
+
+The database and end-to-end tests need the local Supabase stack. The end-to-end tests create accounts and catalog rows, so they refuse to run against anything but local Supabase. Run `npx playwright install chromium` once, then pass the local values from `npx supabase status`:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 \
@@ -65,19 +83,13 @@ NEXT_PUBLIC_APP_URL=http://localhost:3100 \
 npm run test:e2e
 ```
 
-This builds the app with the local settings; run `npm run build` again afterwards before using `npm run start` with your normal environment. GitHub Actions (`.github/workflows/ci.yml`) runs the format check, lint, typecheck, unit tests, build and the database tests on every push to `main` and every pull request.
+This builds the app with the local settings, so run `npm run build` again before `npm run start` with your normal environment. GitHub Actions runs the format check, lint, typecheck, unit tests, build and database tests on every push to `main` and every pull request.
 
-Stop the local stack with `npm run supabase:stop`. Never commit `.env.local`, Supabase secret keys, or provider API keys.
+## Database
 
-`supabase/seeds/leftover_recipes.sql` adds 100 CookMatch-owned recipes built around food that often goes to waste. It is not part of `npm run db:reset`, so the fixed test fixture in `Testing & QA.md` stays unchanged. To load it, run the file in the Supabase SQL editor after the migrations; it is safe to run more than once.
+### Migrations
 
-`supabase/seeds/world_recipes.sql` adds another 100 CookMatch-owned recipes, 20 each for Bangladeshi, Indian, Chinese, Mexican and Thai cooking, plus the ingredients and aliases they need. It loads the same way and does not depend on the leftover seed.
-
-`supabase/seeds/recipe_images.sql` gives every seed recipe a freely licensed photo from Wikimedia Commons and puts the photographer and licence in the recipe's attribution line. `supabase/seeds/recipe_quantities.sql` adds ingredient quantities (home-cooking estimates, not tested measurements). Run both after the recipe seeds.
-
-### Production database
-
-Schema changes go through migrations, never the SQL editor, so `supabase/migrations` always matches production:
+Schema changes go through `supabase/migrations`, never the SQL editor, so the repository always matches production:
 
 ```bash
 npx supabase link --project-ref <your project ref>   # once
@@ -85,40 +97,59 @@ npx supabase migration list                          # compare local and remote
 npm run db:push                                      # apply new migrations
 ```
 
-If a migration was ever pasted into the SQL editor by hand, mark it as applied before pushing, otherwise `db:push` tries to run it again and fails: `npx supabase migration repair --status applied <version>` (for example `202611140001`).
+If a migration was ever pasted into the SQL editor by hand, mark it as applied first, otherwise `db:push` tries to run it again: `npx supabase migration repair --status applied <version>`.
 
-Seed data is optional content, not schema. Every seed file is idempotent, so there is nothing to track: to bring production up to date, run all of them in this order (SQL editor, or `psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f <file>`):
+To make an account an admin, sign up through the app and set that account's `profiles.role` to `admin` in the database. Public registration never grants admin access.
 
-1. `supabase/seed.sql`
-2. `supabase/seeds/leftover_recipes.sql`
-3. `supabase/seeds/world_recipes.sql`
-4. `supabase/seeds/recipe_images.sql`
-5. `supabase/seeds/recipe_quantities.sql`
+### Seed data
 
-Set `SUPABASE_SECRET_KEY` in the production environment: the guest request limit uses it and is skipped without it.
+Seed files are optional content, not schema. Each one is safe to run more than once. Run them in this order in the Supabase SQL editor, or with `psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f <file>`:
 
-Code style is enforced by Prettier: `npm run format` rewrites files, `npm run format:check` is what CI runs.
+| Order | File | Contents |
+| --- | --- | --- |
+| 1 | `supabase/seed.sql` | Five demo recipes: the fixed fixture the tests rely on (loaded by `npm run db:reset`) |
+| 2 | `supabase/seeds/leftover_recipes.sql` | 99 recipes built around food that often goes to waste |
+| 3 | `supabase/seeds/world_recipes.sql` | 100 recipes: 20 each for Bangladeshi, Indian, Chinese, Mexican and Thai cooking |
+| 4 | `supabase/seeds/recipe_images.sql` | A photo and photo credit for every seed recipe |
+| 5 | `supabase/seeds/recipe_quantities.sql` | Ingredient quantities for every seed recipe |
 
-To regenerate Supabase TypeScript types after changing the schema, run `npm run db:types`. To make a local account an admin, sign up through the app and update that account's `profiles.role` with the local Supabase SQL editor; public registration never grants admin access.
+The seed catalog contains no pork, bacon, ham or sausage. A database seeded before that change needs `supabase/seeds/remove_pork.sql` run once, then files 2 to 5 again.
 
-## Environment configuration
+## Project structure
 
-Expected variable names are listed in `.env.example`. Public Supabase URL/publishable key may use `NEXT_PUBLIC_`; any Supabase secret and recipe provider keys must remain server-only. Configure separate values for local development, Vercel preview and production. Add auth callback URLs for each environment in Supabase.
-
-## Recipe data and attribution
-
-TheMealDB and Spoonacular are external API providers, not unrestricted datasets. Use official APIs only. Before importing or caching provider data, check the current API terms, plan, quota, attribution and storage rights. Keep provider calls on the server. Persist source IDs and required attribution wherever permitted, and never imply the catalog is exhaustive if a provider or quota is unavailable. Details are in `implementation.md`.
+```text
+src/app/(auth)/        Sign-in and registration pages
+src/app/(app)/         Pantry, recipes, saved recipes and admin pages
+src/app/api/v1/        JSON API route handlers
+src/components/        UI components
+src/lib/               Environment, Supabase clients, validation and helpers
+src/server/            Domain services and server-only recipe provider adapters
+src/proxy.ts           Session refresh, route guard and security headers
+supabase/migrations/   Schema, row-level security policies and SQL functions
+supabase/seeds/        Optional catalog data
+supabase/tests/        Database tests
+e2e/                   End-to-end tests
+docs/                  Requirements, design and reference documents
+```
 
 ## Documentation
 
-| File | Purpose |
+| Document | Purpose |
 | --- | --- |
-| `implementation.md` | Selected stack, architecture, database, integrations, security, build phases and acceptance gates |
-| `CookMatch Software Requirements Specification.md` | Product scope and functional/non-functional requirements |
-| `Design.md` | Tailwind-oriented visual system and responsive UI requirements |
-| `API.md` | JSON API contract for Route Handlers where implemented |
-| `Authentication_and_Security.md` | Supabase Auth, RLS and application security |
-| `cookmatch_architecture_and_database.md` | System architecture and data model |
-| `Integration.md` | App, Supabase, providers and Vercel integration |
-| `Testing & QA.md` | Requirement-linked verification plan |
-| `Debugging.md` | Troubleshooting guide for the selected stack |
+| [Requirements (SRS)](docs/srs.md) | Product scope, functional and non-functional requirements |
+| [Implementation guide](docs/implementation.md) | Selected stack, architecture, build phases and acceptance gates |
+| [API reference](docs/api.md) | JSON API contract |
+| [Security](docs/security.md) | Authentication, row-level security and application security |
+| [Architecture and database](docs/architecture-and-database.md) | System architecture and data model |
+| [Design](docs/design.md) | Visual system and responsive UI requirements |
+| [Integration](docs/integration.md) | App, Supabase, recipe providers and Vercel |
+| [Testing and QA](docs/testing-and-qa.md) | Requirement-linked test plan |
+| [Debugging](docs/debugging.md) | Troubleshooting guide |
+
+AI coding agents should read [AGENTS.md](AGENTS.md) first.
+
+## Recipe data and credits
+
+- **Seed recipes** are written for CookMatch. Quantities are home-cooking estimates, not tested measurements, and dietary tags follow the ingredient list; they are not allergy or certification claims.
+- **Photos** come from Wikimedia Commons under Creative Commons or public-domain licences. Each recipe page credits the photographer and licence.
+- **Spoonacular and TheMealDB** are external API providers, not open datasets. They are called only from the server through their official APIs, with attribution, and their data is not stored or redistributed. Check each provider's current terms before caching or importing anything.

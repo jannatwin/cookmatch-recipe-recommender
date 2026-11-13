@@ -30,7 +30,7 @@ Troubleshooting guide for the selected TypeScript, Next.js App Router, Tailwind 
 - Supabase CLI/local stack where configured.
 - Playwright or the project's chosen browser verification tool.
 
-Use `npm run dev` for local development and `npm run build` to reproduce production-build issues. Check actual scripts in `package.json` before running commands. Do not add or run tests unless the task asks for verification; follow `Testing & QA.md` when tests are requested.
+Use `npm run dev` for local development and `npm run build` to reproduce production-build issues. Check actual scripts in `package.json` before running commands. Do not add or run tests unless the task asks for verification; follow `testing-and-qa.md` when tests are requested.
 
 ## 3. Logging and secrets
 

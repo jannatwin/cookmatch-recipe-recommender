@@ -2,15 +2,15 @@
 
 Before changing code, read:
 
-1. `implementation.md` for the selected stack, architecture, data-source constraints and build sequence.
-2. `CookMatch Software Requirements Specification.md` for product requirements and acceptance intent.
-3. The relevant supporting documents (`API.md`, `Authentication_and_Security.md`, `cookmatch_architecture_and_database.md`, `Design.md`, `Integration.md`, and `Testing & QA.md`) for detailed behavior and rationale.
+1. `docs/implementation.md` for the selected stack, architecture, data-source constraints and build sequence.
+2. `docs/srs.md` for product requirements and acceptance intent.
+3. The relevant supporting documents (`docs/api.md`, `docs/security.md`, `docs/architecture-and-database.md`, `docs/design.md`, `docs/integration.md`, and `docs/testing-and-qa.md`) for detailed behavior and rationale.
 
 ## Source of truth
 
 - The SRS is the baseline for what CookMatch does.
-- `implementation.md` selects TypeScript, Next.js App Router, Tailwind CSS, Supabase/PostgreSQL and Vercel. It supersedes older stack proposals such as Express, integer user IDs and app-managed JWTs.
-- Supporting documents may contain proposed defaults or older examples. If they conflict with the SRS or `implementation.md`, follow the SRS for product behavior and `implementation.md` for the stack, then update stale docs when the change is in scope.
+- `docs/implementation.md` selects TypeScript, Next.js App Router, Tailwind CSS, Supabase/PostgreSQL and Vercel. It supersedes older stack proposals such as Express, integer user IDs and app-managed JWTs.
+- Supporting documents may contain proposed defaults or older examples. If they conflict with the SRS or `docs/implementation.md`, follow the SRS for product behavior and `docs/implementation.md` for the stack, then update stale docs when the change is in scope.
 - Do not silently change scope or redefine ranking behavior. Call out a real ambiguity and make the smallest compatible choice.
 
 ## Implementation rules
@@ -21,7 +21,7 @@ Before changing code, read:
 - Keep recipe provider payloads behind server-only adapters; do not scrape provider sites or assume storage/redistribution rights.
 - Keep recommendation scoring deterministic and in a domain module, separate from UI and provider code.
 - Preserve accessibility, responsive behavior and the project's documented visual design.
-- Follow the build phases and completion gates in `implementation.md`. Report which requirements are complete, how behavior was verified, and any unresolved provider terms or scope decisions.
+- Follow the build phases and completion gates in `docs/implementation.md`. Report which requirements are complete, how behavior was verified, and any unresolved provider terms or scope decisions.
 - Update relevant documentation when implementation changes a documented behavior or setup step.
 
 
