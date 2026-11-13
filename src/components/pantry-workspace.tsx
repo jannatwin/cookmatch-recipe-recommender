@@ -21,6 +21,7 @@ export function PantryWorkspace() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [catalog, setCatalog] = useState<Array<{ ingredientId: number; name: string }>>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const [activeSuggestion, setActiveSuggestion] = useState(0);
   const [noMatchFor, setNoMatchFor] = useState("");
@@ -53,6 +54,8 @@ export function PantryWorkspace() {
       })
       .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Could not load your pantry."))
       .finally(() => setLoading(false));
+    apiRequest<{ data: Array<{ ingredientId: number; name: string }> }>("/api/v1/ingredients")
+      .then(({ data }) => setCatalog(data)).catch(() => {}); // the picker is optional; typing still works
   }, []);
 
   useEffect(() => {
@@ -70,6 +73,16 @@ export function PantryWorkspace() {
 
   function chooseSuggestion(suggestion: Suggestion) {
     setQuery((current) => `${current.slice(0, current.lastIndexOf(",") + 1)}${current.includes(",") ? " " : ""}${suggestion.name}, `);
+    setSuggestions([]);
+    setNoMatchFor("");
+    inputRef.current?.focus();
+  }
+
+  function pickFromCatalog(name: string) {
+    setQuery((current) => {
+      const typed = current.trim();
+      return `${typed && !typed.endsWith(",") ? `${typed}, ` : current}${name}, `;
+    });
     setSuggestions([]);
     setNoMatchFor("");
     inputRef.current?.focus();
@@ -196,6 +209,16 @@ export function PantryWorkspace() {
           </div>
           <button type="submit" disabled={busy || !query.trim()} className={buttonPrimary}>{busy ? "Adding…" : "Add to pantry"}</button>
         </form>
+        {catalog.length > 0 && <div className="mt-6 border-t border-[#ead9cd] pt-5">
+          <h3 className="text-sm font-extrabold">Ingredients list <span className="ml-1 font-bold text-[#8b7061]">{catalog.length}</span></h3>
+          <p className="mt-1 text-sm text-[#765b4d]">Everything our recipes use. Pick the ones you have, then press Add to pantry.</p>
+          <ul className="mt-3 flex max-h-56 flex-wrap gap-2 overflow-auto p-1">
+            {catalog.map((ingredient) => {
+              const owned = items.some((item) => item.ingredientId === ingredient.ingredientId);
+              return <li key={ingredient.ingredientId}><button type="button" disabled={owned} onClick={() => pickFromCatalog(ingredient.name)} className="min-h-9 rounded-full border border-[#d8bca9] bg-white px-3 text-sm font-bold transition hover:bg-mint/60 focus-visible:outline-4 focus-visible:outline-cocoa disabled:border-transparent disabled:bg-mint disabled:text-[#477456]">{owned && <span aria-hidden="true">✓ </span>}{ingredient.name}{owned && <span className="sr-only"> (in your pantry)</span>}</button></li>;
+            })}
+          </ul>
+        </div>}
       </Panel>
 
       {error && <p role="alert" className="mb-5 rounded-2xl bg-[#ffe1dd] px-4 py-3 text-sm font-semibold text-[#7b2b22]">{error}</p>}
