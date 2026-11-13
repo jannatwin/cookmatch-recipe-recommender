@@ -108,8 +108,12 @@ test("main journey: register, pantry, recommendations, recipe, cooking, sign out
   await page.getByRole("button", { name: /Sign out|Exit/ }).click();
   await expect(page).toHaveURL(/\/login$/);
   expect((await page.request.get("/api/v1/auth/me")).status()).toBe(401);
+  // Guests can browse recipes without an account.
+  expect((await page.request.get("/api/v1/recommendations")).status()).toBe(200);
   await page.goto("/recipes");
-  await expect(page).toHaveURL(/\/login\?next=%2Frecipes/);
+  await expect(page.getByRole("heading", { name: "CookMatch collection" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
+  await expect(page.locator("article").first()).toBeVisible();
 
   // No horizontal scrolling, and nothing blocked by the Content Security Policy.
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

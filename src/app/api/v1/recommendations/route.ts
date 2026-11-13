@@ -1,11 +1,11 @@
 import { ApiError, apiErrorResponse } from "@/lib/api/errors";
-import { requireUser } from "@/lib/auth/require-user";
+import { optionalUser } from "@/lib/auth/require-user";
 import { EXPIRY_WARNING_DAYS } from "@/server/services/matching";
 import { recommendationQuerySchema } from "@/lib/validation/api";
 
 export async function GET(request: Request) {
   try {
-    const { supabase, user } = await requireUser();
+    const { supabase, user } = await optionalUser();
     const query = recommendationQuerySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
     if (!query.success) {
       throw new ApiError(400, "VALIDATION_ERROR", "Recommendation filters are invalid", query.error.issues.map((issue) => ({
@@ -27,17 +27,20 @@ export async function GET(request: Request) {
       dietTagId = tag.id;
     }
 
-    const { count: pantryCount, error: pantryError } = await supabase
-      .from("pantry_items")
-      .select("ingredient_id", { count: "exact", head: true })
-      .eq("user_id", user.id);
-    if (pantryError) throw new ApiError(500, "SERVER_ERROR", "Could not load pantry");
-    if (!pantryCount) {
-      return Response.json({
-        data: [],
-        hint: "Add ingredients to your pantry to get recommendations",
-        pagination: { page: query.data.page, limit: query.data.limit, totalItems: 0, totalPages: 0 },
-      });
+    // Guests have no pantry: get_recommendations lists the published catalog unranked for them.
+    if (user) {
+      const { count: pantryCount, error: pantryError } = await supabase
+        .from("pantry_items")
+        .select("ingredient_id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      if (pantryError) throw new ApiError(500, "SERVER_ERROR", "Could not load pantry");
+      if (!pantryCount) {
+        return Response.json({
+          data: [],
+          hint: "Add ingredients to your pantry to get recommendations",
+          pagination: { page: query.data.page, limit: query.data.limit, totalItems: 0, totalPages: 0 },
+        });
+      }
     }
 
     const { data: rows, error } = await supabase.rpc("get_recommendations", {
@@ -54,6 +57,7 @@ export async function GET(request: Request) {
 
     const totalItems = rows[0]?.total_items ?? 0;
     return Response.json({
+      guest: !user,
       data: rows.map((row) => ({
         recipeId: row.recipe_id,
         title: row.title,

@@ -20,6 +20,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [error, setError] = useState("");
   const [signingOut, setSigningOut] = useState(false);
 
+  // Mirrors proxy.ts: recipe pages are open to guests.
+  const guestPage = pathname === "/recipes" || pathname.startsWith("/recipes/");
+
   useEffect(() => {
     let active = true;
     apiRequest<{ user: CurrentUser }>("/api/v1/auth/me")
@@ -27,6 +30,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       .catch((cause: unknown) => {
         if (!active) return;
         if (cause instanceof Error && cause.message === "Sign in is required") {
+          setUser(null);
+          if (guestPage) return;
           // Clear a stale cookie first, otherwise proxy.ts would bounce /login back here.
           void apiRequest<void>("/api/v1/auth/logout", { method: "POST" }).catch(() => {})
             .then(() => router.replace(`/login?next=${encodeURIComponent(pathname)}`));
@@ -36,7 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       })
       .finally(() => { if (active) setChecking(false); });
     return () => { active = false; };
-  }, [pathname, router]);
+  }, [pathname, router, guestPage]);
 
   async function signOut() {
     setSigningOut(true);
@@ -50,7 +55,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }
 
-  if (checking || !user) {
+  if (checking || (!user && (!guestPage || error))) {
     return (
       <main className="grid min-h-screen place-items-center px-5">
         <div role="status" className="rounded-3xl bg-white/80 px-6 py-5 text-sm font-bold shadow-clay">
@@ -60,12 +65,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
-  const allLinks = user.role === "admin" ? [...links, { href: "/admin", label: "Admin" }] : links;
+  const allLinks = user?.role === "admin" ? [...links, { href: "/admin", label: "Admin" }] : links;
   return (
     <div className="min-h-screen pb-24 md:pb-0">
       <header className="sticky top-0 z-30 border-b border-[#e8d4c7] bg-cream/90 backdrop-blur-xl">
         <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between px-4 sm:px-7 lg:px-9">
-          <Link href="/pantry" className="flex items-center gap-2.5 rounded-xl focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-cocoa">
+          <Link href={user ? "/pantry" : "/"} className="flex items-center gap-2.5 rounded-xl focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-cocoa">
             <span aria-hidden="true" className="grid size-10 place-items-center rounded-2xl bg-coral text-xl font-black shadow-[0_4px_0_#db6e58]">C</span>
             <span className="text-xl font-black tracking-tight">CookMatch</span>
           </Link>
@@ -75,7 +80,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={`rounded-full px-4 py-2 text-sm font-bold transition hover:bg-white/80 ${active ? "bg-white text-cocoa shadow-sm" : "text-[#765b4d]"}`}>{item.label}</Link>;
             })}
           </nav>
-          <div className="flex items-center gap-2 sm:gap-3">
+          {user ? <div className="flex items-center gap-2 sm:gap-3">
             <div className="hidden text-right sm:block">
               <p className="max-w-40 truncate text-sm font-extrabold">{user.name}</p>
               <p className="text-xs text-[#765b4d]">{user.role === "admin" ? "Kitchen admin" : "Home cook"}</p>
@@ -83,7 +88,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             <button type="button" onClick={signOut} disabled={signingOut} className="min-h-11 rounded-full border border-[#d3b8a5] bg-white/70 px-4 text-sm font-bold transition hover:bg-white focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-cocoa disabled:opacity-60">
               <span className="hidden sm:inline">{signingOut ? "Signing out…" : "Sign out"}</span><span className="sm:hidden" aria-label="Sign out">Exit</span>
             </button>
-          </div>
+          </div> : <div className="flex items-center gap-2">
+            <Link href={`/login?next=${encodeURIComponent(pathname)}`} className="inline-flex min-h-11 items-center rounded-full border border-[#d3b8a5] bg-white/70 px-4 text-sm font-bold transition hover:bg-white focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-cocoa">Sign in</Link>
+            <Link href="/register" className="hidden min-h-11 items-center rounded-full bg-coral px-4 text-sm font-extrabold shadow-[0_4px_0_#db6e58] focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-cocoa sm:inline-flex">Create account</Link>
+          </div>}
         </div>
       </header>
       {error && <div role="alert" className="mx-auto mt-4 max-w-7xl px-4 sm:px-7 lg:px-9"><p className="rounded-2xl bg-[#ffe1dd] px-4 py-3 text-sm font-semibold text-[#7b2b22]">{error}</p></div>}

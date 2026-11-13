@@ -11,6 +11,13 @@ export async function requireUser() {
   return { supabase, user: data.user };
 }
 
+// For routes guests may read: RLS limits a signed-out client to the published catalog.
+export async function optionalUser() {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getUser();
+  return { supabase, user: data.user };
+}
+
 export async function requireAdmin() {
   const { supabase, user } = await requireUser();
   const { data: profile, error } = await supabase

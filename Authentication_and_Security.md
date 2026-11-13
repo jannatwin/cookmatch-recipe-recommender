@@ -24,7 +24,7 @@ Use a `profiles` table keyed by `auth.users.id` (UUID). Store a constrained `rol
 | Resource/action | Anonymous | User | Admin |
 | --- | --- | --- | --- |
 | Register/login | Allowed | Allowed | Allowed |
-| Read published catalog | No or explicitly public fields only | Allowed | Allowed |
+| Read published catalog (recipes, ingredients, cuisines, dietary tags, substitutes) | Allowed (read-only, published recipes only) | Allowed | Allowed |
 | Read/change pantry | Denied | Own rows only | Own rows only unless an explicit support workflow is approved |
 | Create/update/delete catalog | Denied | Denied | Allowed |
 | Provider import/sync | Denied | Denied | Trusted server task only |
@@ -33,7 +33,7 @@ Enable RLS for every exposed table. Enforce ownership with `auth.uid() = user_id
 
 Never expose a Supabase secret key to client code. It bypasses RLS; prefer user-scoped clients for ordinary requests. If a trusted import task needs elevated access, verify the task authority first. Prefer the current publishable/secret key pair over legacy `anon`/`service_role` keys.
 
-`src/proxy.ts` redirects signed-out visitors away from `/pantry`, `/recipes`, `/admin` and `/provider-recipes` to `/login?next=…`, and signed-in visitors away from `/login` and `/register`. This is a navigation convenience only: every API route still calls `requireUser`/`requireAdmin`, and RLS is the final control. Sign-in attempts are rate-limited by Supabase Auth; the app adds no limiter of its own.
+`src/proxy.ts` redirects signed-out visitors away from `/pantry`, `/admin` and `/provider-recipes` to `/login?next=…` (`/recipes` is open to guests, who browse the published catalog without pantry matching), and signed-in visitors away from `/login` and `/register`. This is a navigation convenience only: every API route still calls `requireUser`/`requireAdmin` (or `optionalUser` for the guest-readable catalog GETs), and RLS is the final control. Sign-in attempts are rate-limited by Supabase Auth; the app adds no limiter of its own.
 
 ## 4. Data protection
 
