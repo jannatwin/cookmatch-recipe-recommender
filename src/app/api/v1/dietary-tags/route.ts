@@ -5,9 +5,9 @@ import { z } from "zod";
 
 const bodySchema = z.object({ name: z.string().trim().min(1).max(50) });
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const { supabase } = await optionalUser();
+    const { supabase } = await optionalUser(request);
     const { data, error } = await supabase.from("dietary_tags").select("id,name").order("name");
     if (error) throw new ApiError(500, "SERVER_ERROR", "Could not load dietary tags");
     return Response.json({ data: data.map(({ id, name }) => ({ tagId: id, name })) });
@@ -21,7 +21,10 @@ export async function POST(request: Request) {
     const { supabase } = await requireAdmin();
     const { name } = await parseJson(request, bodySchema);
     const { data: existing, error: lookupError } = await supabase
-      .from("dietary_tags").select("id").ilike("name", name.replace(/[\\%_]/g, "\\$&")).limit(1);
+      .from("dietary_tags")
+      .select("id")
+      .ilike("name", name.replace(/[\\%_]/g, "\\$&"))
+      .limit(1);
     if (lookupError) throw new ApiError(500, "SERVER_ERROR", "Could not check existing dietary tags");
     if (existing.length) throw new ApiError(409, "DUPLICATE", "This dietary tag already exists");
     const { data, error } = await supabase.from("dietary_tags").insert({ name }).select("id,name").single();

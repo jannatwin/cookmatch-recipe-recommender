@@ -6,7 +6,8 @@ export async function POST(request: Request) {
   try {
     const input = await parseJson(request, registerSchema);
     const supabase = await createClient();
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ||
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
       (process.env.VERCEL_PROJECT_PRODUCTION_URL
         ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
         : process.env.NODE_ENV === "production"
@@ -25,7 +26,8 @@ export async function POST(request: Request) {
       if (/already registered|already exists/i.test(error.message)) {
         throw new ApiError(409, "DUPLICATE", "An account with this email already exists");
       }
-      if (error.status === 429) throw new ApiError(429, "RATE_LIMITED", "Please wait before trying to register again");
+      if (error.status === 429)
+        throw new ApiError(429, "RATE_LIMITED", "Please wait before trying to register again");
       throw new ApiError(400, "VALIDATION_ERROR", "Could not create account", [
         { field: "account", issue: "Signup was rejected; check the supplied fields" },
       ]);

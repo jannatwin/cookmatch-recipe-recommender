@@ -36,7 +36,8 @@ The system has four parts that work together: a web user interface, a recommenda
 
 | User class | Description | Main needs |
 | --- | --- | --- |
-| Registered user | Anyone who cooks at home and has an account | Enter ingredients, view ranked recipes, apply filters, start cooking |
+| Guest | A visitor without an account | Browse the published recipe collection, filter it, open recipe details and start cooking |
+| Registered user | Anyone who cooks at home and has an account | Enter ingredients, view ranked recipes, apply filters, save recipes, start cooking |
 | Administrator | Team member who maintains recipe and ingredient data | Add, edit and remove recipes, ingredients and substitutes |
 
 ### 2.3 Operating environment
@@ -110,6 +111,10 @@ The system shall provide the 21 functions below. Priority is High (needed for th
 | FR-17 | The system shall let the user select a recipe from the recommended list | High |
 | FR-18 | The system shall display complete recipe details: ingredients, instructions and an image where available | High |
 | FR-19 | The system shall let the user start cooking from the recipe details view | Low |
+| FR-22 | The system shall let a guest browse and filter the published recipe collection and open recipe details without an account; pantry matching, match scores and saved recipes require an account | High |
+| FR-23 | The system shall let a registered user save and unsave recipes and view their saved recipes | Medium |
+| FR-24 | The system shall show recipes recently viewed in the current browser | Low |
+| FR-25 | The system shall show ingredient quantities in recipe details where they are available | Medium |
 
 ### 3.7 Administration
 
@@ -170,7 +175,7 @@ Recipes are sorted by match score from highest to lowest. A recipe that uses exp
 
 ## 7. Use Case Summary
 
-The system has two actors: the User and the Administrator. Each use case below is to be detailed with a full description, flows and exceptions in the use case modeling phase.
+The system has three actors: the Guest, the User and the Administrator. Each use case below is to be detailed with a full description, flows and exceptions in the use case modeling phase.
 
 | ID | Use case | Actor | Related requirements |
 | --- | --- | --- | --- |
@@ -182,11 +187,13 @@ The system has two actors: the User and the Administrator. Each use case below i
 | UC-6 | View recipe details | User | FR-17, FR-18 |
 | UC-7 | Start cooking | User | FR-19 |
 | UC-8 | Manage recipes, ingredients and substitutes | Administrator | FR-20, FR-21 |
+| UC-9 | Browse recipes without an account | Guest | FR-15, FR-17 to FR-19, FR-22, FR-24, FR-25 |
+| UC-10 | Save recipes for later | User | FR-23 |
 
 ## 8. Limitations and Out of Scope
 
 1. Recommendation accuracy depends on how complete and correct the recipe and ingredient database is.
-2. The first version matches on ingredient presence or absence only and ignores quantities.
+2. The first version matches on ingredient presence or absence only and ignores quantities. Quantities shown in recipe details are for cooking guidance and do not affect match scores.
 3. Any nutritional or dietary information is approximate and not verified by a certified nutritionist.
 4. Image-based ingredient recognition, such as detecting ingredients from a photo of a fridge, is not supported.
 5. Regional and local ingredient names may not be fully standardized in the initial database.

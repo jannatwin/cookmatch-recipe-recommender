@@ -8,6 +8,34 @@
   --color-butter: #ffe7a3;
   --color-lavender: #d9ccf5;
   --color-cocoa: #4a3328;
+  --color-muted: #765b4d;
+  --color-clay: #8b604d;
+  --color-subtle: #8b7061;
+  --color-line: #e8d4c7;
+  --color-line-strong: #d3b8a5;
+  --color-paper: #fffaf4;
+  --color-peach-soft: #f9e5d7;
+  --color-coral-deep: #db6e58;
+  --color-danger: #7b2b22;
+  --color-danger-soft: #ffe1dd;
+  --color-blush: #fff0ed;
+  --color-success: #477456;
+  --color-leaf: #64a77c;
+  --color-mint-soft: #e8f6eb;
+  --color-mint-deep: #71ad87;
+  --color-butter-soft: #fff4ce;
+  --color-butter-deep: #d5a461;
+  --color-honey: #86642d;
+  --color-honey-line: #edcf8a;
+  --color-plum: #5f516f;
+  --color-grape: #6a4d9b;
+  --color-lavender-line: #d8c9ec;
+  --shadow-button: 0 4px 0 #db6e58;
+  --shadow-button-lg: 0 5px 0 #db6e58;
+  --shadow-button-pressed: 0 2px 0 #db6e58;
+  --shadow-lift: 14px 16px 30px rgb(120 70 50 / 20%);
+  --shadow-hero: 16px 18px 40px rgb(120 70 50 / 18%);
+  --shadow-card: 14px 14px 36px rgb(120 70 50 / 14%), inset 3px 3px 8px rgb(255 255 255 / 80%);
   --shadow-clay: 10px 10px 22px rgb(150 90 60 / 18%), inset 4px 4px 10px rgb(255 255 255 / 60%);
 }
 

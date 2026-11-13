@@ -3,25 +3,18 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { apiRequest } from "@/lib/client-api";
+import { IngredientCatalog, type CatalogIngredient } from "@/components/ingredient-catalog";
+import { PantryItemCard, today, type PantryItem } from "@/components/pantry-item-card";
 import { buttonPrimary, buttonSecondary, EmptyState, inputClass, PageHeading, Panel } from "@/components/ui";
 
-type PantryItem = { ingredientId: number; name: string; expiryDate: string | null; expiringSoon: boolean };
 type Suggestion = { ingredientId: number; name: string; matchedAlias: string | null };
-
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function prettyDate(value: string) {
-  return new Date(`${value}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-}
 
 export function PantryWorkspace() {
   const [items, setItems] = useState<PantryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [catalog, setCatalog] = useState<Array<{ ingredientId: number; name: string }>>([]);
+  const [catalog, setCatalog] = useState<CatalogIngredient[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const [activeSuggestion, setActiveSuggestion] = useState(0);
   const [noMatchFor, setNoMatchFor] = useState("");
@@ -52,10 +45,13 @@ export function PantryWorkspace() {
         setDates(Object.fromEntries(data.map((item) => [item.ingredientId, item.expiryDate ?? ""])));
         setError("");
       })
-      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Could not load your pantry."))
+      .catch((cause: unknown) =>
+        setError(cause instanceof Error ? cause.message : "Could not load your pantry."),
+      )
       .finally(() => setLoading(false));
     apiRequest<{ data: Array<{ ingredientId: number; name: string }> }>("/api/v1/ingredients")
-      .then(({ data }) => setCatalog(data)).catch(() => {}); // the picker is optional; typing still works
+      .then(({ data }) => setCatalog(data))
+      .catch(() => {}); // the picker is optional; typing still works
   }, []);
 
   useEffect(() => {
@@ -65,14 +61,28 @@ export function PantryWorkspace() {
     let active = true; // ignore responses that arrive after the query changed
     const timeout = window.setTimeout(() => {
       apiRequest<{ data: Suggestion[] }>(`/api/v1/ingredients/search?q=${encodeURIComponent(text)}&limit=8`)
-        .then(({ data }) => { if (active) { setSuggestions(data); setActiveSuggestion(0); setNoMatchFor(data.length ? "" : text); } })
-        .catch(() => { if (active) setSuggestions([]); });
+        .then(({ data }) => {
+          if (active) {
+            setSuggestions(data);
+            setActiveSuggestion(0);
+            setNoMatchFor(data.length ? "" : text);
+          }
+        })
+        .catch(() => {
+          if (active) setSuggestions([]);
+        });
     }, 180);
-    return () => { active = false; window.clearTimeout(timeout); };
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
   }, [query]);
 
   function chooseSuggestion(suggestion: Suggestion) {
-    setQuery((current) => `${current.slice(0, current.lastIndexOf(",") + 1)}${current.includes(",") ? " " : ""}${suggestion.name}, `);
+    setQuery(
+      (current) =>
+        `${current.slice(0, current.lastIndexOf(",") + 1)}${current.includes(",") ? " " : ""}${suggestion.name}, `,
+    );
     setSuggestions([]);
     setNoMatchFor("");
     inputRef.current?.focus();
@@ -107,7 +117,14 @@ export function PantryWorkspace() {
   async function addItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
-    const names = [...new Set(query.split(",").map((name) => name.trim()).filter(Boolean))];
+    const names = [
+      ...new Set(
+        query
+          .split(",")
+          .map((name) => name.trim())
+          .filter(Boolean),
+      ),
+    ];
     if (!names.length) return;
     setBusy(true);
     setError("");
@@ -122,21 +139,31 @@ export function PantryWorkspace() {
     for (const name of names) {
       try {
         const created = await apiRequest<PantryItem>("/api/v1/pantry/items", {
-          method: "POST", body: JSON.stringify({ name, expiryDate: expiryDate || null }),
+          method: "POST",
+          body: JSON.stringify({ name, expiryDate: expiryDate || null }),
         });
         added.push(created.name);
       } catch (cause) {
-        failed.push({ name, reason: cause instanceof Error ? cause.message : "Could not add that ingredient." });
+        failed.push({
+          name,
+          reason: cause instanceof Error ? cause.message : "Could not add that ingredient.",
+        });
       }
     }
     if (added.length) {
       setNotice(`${added.join(", ")} added to your pantry.`);
       await loadPantry();
     }
-    if (failed.length) setError(failed.length === 1 ? failed[0].reason : failed.map((item) => `${item.name}: ${item.reason}`).join(" · "));
+    if (failed.length)
+      setError(
+        failed.length === 1
+          ? failed[0].reason
+          : failed.map((item) => `${item.name}: ${item.reason}`).join(" · "),
+      );
     else setExpiryDate("");
     // Put back only what still needs fixing, ahead of anything typed in the meantime.
-    if (failed.length) setQuery((current) => [...failed.map((item) => item.name), current].filter(Boolean).join(", "));
+    if (failed.length)
+      setQuery((current) => [...failed.map((item) => item.name), current].filter(Boolean).join(", "));
     setBusy(false);
   }
 
@@ -146,7 +173,8 @@ export function PantryWorkspace() {
     setNotice("");
     try {
       await apiRequest<PantryItem>(`/api/v1/pantry/items/${item.ingredientId}`, {
-        method: "PATCH", body: JSON.stringify({ expiryDate: dates[item.ingredientId] || null }),
+        method: "PATCH",
+        body: JSON.stringify({ expiryDate: dates[item.ingredientId] || null }),
       });
       setNotice(`${item.name} expiry date updated.`);
       await loadPantry();
@@ -178,77 +206,169 @@ export function PantryWorkspace() {
         eyebrow="Your kitchen, organized"
         title="My pantry"
         description="Keep the ingredients you have on hand in one place. Add expiry dates to use the freshest food first."
-        action={<Link href="/recipes" className={buttonPrimary}>Find recipes <span aria-hidden="true" className="ml-2">→</span></Link>}
+        action={
+          <Link href="/recipes" className={buttonPrimary}>
+            Find recipes{" "}
+            <span aria-hidden="true" className="ml-2">
+              →
+            </span>
+          </Link>
+        }
       />
       <Panel className="mb-7">
         <div className="mb-5 flex items-start gap-3">
-          <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-2xl bg-mint text-xl">＋</span>
-          <div><h2 className="text-xl font-extrabold">Add ingredients</h2><p className="mt-1 text-sm text-[#765b4d]">Start typing to see matching ingredients, then press Tab or Enter to complete. Separate several with commas.</p></div>
+          <span
+            aria-hidden="true"
+            className="grid size-11 shrink-0 place-items-center rounded-2xl bg-mint text-xl"
+          >
+            ＋
+          </span>
+          <div>
+            <h2 className="text-xl font-extrabold">Add ingredients</h2>
+            <p className="mt-1 text-sm text-muted">
+              Start typing to see matching ingredients, then press Tab or Enter to complete. Separate several
+              with commas.
+            </p>
+          </div>
         </div>
         <form onSubmit={addItem} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_12rem_auto] lg:items-end">
           <div className="relative">
-            <label htmlFor="ingredient-search" className="mb-2 block text-sm font-bold">Ingredients</label>
+            <label htmlFor="ingredient-search" className="mb-2 block text-sm font-bold">
+              Ingredients
+            </label>
             <input
-              id="ingredient-search" value={query} ref={inputRef} onChange={(event) => { setQuery(event.target.value); setSuggestions([]); setNoMatchFor(""); }}
-              onKeyDown={handleSuggestionKeys} className={inputClass} placeholder="e.g. egg, tomato, piyaj" autoComplete="off"
-              role="combobox" aria-autocomplete="list" aria-expanded={suggestions.length > 0} aria-controls="ingredient-suggestions"
-              aria-activedescendant={suggestions[activeSuggestion] ? `ingredient-option-${suggestions[activeSuggestion].ingredientId}` : undefined}
+              id="ingredient-search"
+              value={query}
+              ref={inputRef}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setSuggestions([]);
+                setNoMatchFor("");
+              }}
+              onKeyDown={handleSuggestionKeys}
+              className={inputClass}
+              placeholder="e.g. egg, tomato, piyaj"
+              autoComplete="off"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded={suggestions.length > 0}
+              aria-controls="ingredient-suggestions"
+              aria-activedescendant={
+                suggestions[activeSuggestion]
+                  ? `ingredient-option-${suggestions[activeSuggestion].ingredientId}`
+                  : undefined
+              }
             />
-            {suggestions.length > 0 && <ul id="ingredient-suggestions" role="listbox" aria-label="Ingredient suggestions" className="absolute inset-x-0 top-full z-20 mt-2 max-h-64 overflow-auto rounded-2xl border border-[#dec7b8] bg-white p-2 shadow-xl">
-              {suggestions.map((suggestion, index) => <li key={suggestion.ingredientId} id={`ingredient-option-${suggestion.ingredientId}`} role="option" aria-selected={index === activeSuggestion}>
-                <button type="button" onClick={() => chooseSuggestion(suggestion)} className={`flex min-h-12 w-full items-center justify-between rounded-xl px-3 text-left text-sm font-bold hover:bg-mint/60 focus-visible:outline-4 focus-visible:outline-cocoa ${index === activeSuggestion ? "bg-mint/50" : ""}`}>
-                  <span>{suggestion.name}</span><span className="text-xs font-medium text-[#765b4d]">{suggestion.matchedAlias ? `alias: ${suggestion.matchedAlias}` : "ingredient"}</span>
-                </button>
-              </li>)}
-            </ul>}
-            {noMatchFor && <p role="status" className="mt-2 text-sm font-semibold text-[#8b493d]">No ingredient matches “{noMatchFor}”. Check the spelling or try another name.</p>}
+            {suggestions.length > 0 && (
+              <ul
+                id="ingredient-suggestions"
+                role="listbox"
+                aria-label="Ingredient suggestions"
+                className="absolute inset-x-0 top-full z-20 mt-2 max-h-64 overflow-auto rounded-2xl border border-line-strong bg-white p-2 shadow-xl"
+              >
+                {suggestions.map((suggestion, index) => (
+                  <li
+                    key={suggestion.ingredientId}
+                    id={`ingredient-option-${suggestion.ingredientId}`}
+                    role="option"
+                    aria-selected={index === activeSuggestion}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => chooseSuggestion(suggestion)}
+                      className={`flex min-h-12 w-full items-center justify-between rounded-xl px-3 text-left text-sm font-bold hover:bg-mint/60 focus-visible:outline-4 focus-visible:outline-cocoa ${index === activeSuggestion ? "bg-mint/50" : ""}`}
+                    >
+                      <span>{suggestion.name}</span>
+                      <span className="text-xs font-medium text-muted">
+                        {suggestion.matchedAlias ? `alias: ${suggestion.matchedAlias}` : "ingredient"}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {noMatchFor && (
+              <p role="status" className="mt-2 text-sm font-semibold text-danger">
+                No ingredient matches “{noMatchFor}”. Check the spelling or try another name.
+              </p>
+            )}
           </div>
           <div>
-            <label htmlFor="new-expiry" className="mb-2 block text-sm font-bold">Expiry date <span className="font-medium text-[#8b7061]">(optional)</span></label>
-            <input id="new-expiry" type="date" min={today()} value={expiryDate} onChange={(event) => setExpiryDate(event.target.value)} className={inputClass} />
+            <label htmlFor="new-expiry" className="mb-2 block text-sm font-bold">
+              Expiry date <span className="font-medium text-subtle">(optional)</span>
+            </label>
+            <input
+              id="new-expiry"
+              type="date"
+              min={today()}
+              value={expiryDate}
+              onChange={(event) => setExpiryDate(event.target.value)}
+              className={inputClass}
+            />
           </div>
-          <button type="submit" disabled={busy || !query.trim()} className={buttonPrimary}>{busy ? "Adding…" : "Add to pantry"}</button>
+          <button type="submit" disabled={busy || !query.trim()} className={buttonPrimary}>
+            {busy ? "Adding…" : "Add to pantry"}
+          </button>
         </form>
-        {catalog.length > 0 && <div className="mt-6 border-t border-[#ead9cd] pt-5">
-          <h3 className="text-sm font-extrabold">Ingredients list <span className="ml-1 font-bold text-[#8b7061]">{catalog.length}</span></h3>
-          <p className="mt-1 text-sm text-[#765b4d]">Everything our recipes use. Pick the ones you have, then press Add to pantry.</p>
-          <ul className="mt-3 flex max-h-56 flex-wrap gap-2 overflow-auto p-1">
-            {catalog.map((ingredient) => {
-              const owned = items.some((item) => item.ingredientId === ingredient.ingredientId);
-              return <li key={ingredient.ingredientId}><button type="button" disabled={owned} onClick={() => pickFromCatalog(ingredient.name)} className="min-h-9 rounded-full border border-[#d8bca9] bg-white px-3 text-sm font-bold transition hover:bg-mint/60 focus-visible:outline-4 focus-visible:outline-cocoa disabled:border-transparent disabled:bg-mint disabled:text-[#477456]">{owned && <span aria-hidden="true">✓ </span>}{ingredient.name}{owned && <span className="sr-only"> (in your pantry)</span>}</button></li>;
-            })}
-          </ul>
-        </div>}
+        <IngredientCatalog ingredients={catalog} pantry={items} onPick={pickFromCatalog} />
       </Panel>
 
-      {error && <p role="alert" className="mb-5 rounded-2xl bg-[#ffe1dd] px-4 py-3 text-sm font-semibold text-[#7b2b22]">{error}</p>}
-      {notice && <p role="status" className="mb-5 rounded-2xl bg-mint px-4 py-3 text-sm font-semibold">{notice}</p>}
+      {error && (
+        <p
+          role="alert"
+          className="mb-5 rounded-2xl bg-danger-soft px-4 py-3 text-sm font-semibold text-danger"
+        >
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p role="status" className="mb-5 rounded-2xl bg-mint px-4 py-3 text-sm font-semibold">
+          {notice}
+        </p>
+      )}
 
       <div className="mb-4 flex items-center justify-between gap-3">
-        <div><h2 className="text-xl font-extrabold">In your kitchen <span className="ml-1 text-sm font-bold text-[#8b7061]">{items.length}</span></h2></div>
-        {items.some((item) => item.expiringSoon) && <p className="rounded-full bg-butter px-3 py-1.5 text-xs font-extrabold">Use soon: {items.filter((item) => item.expiringSoon).length}</p>}
+        <div>
+          <h2 className="text-xl font-extrabold">
+            In your kitchen <span className="ml-1 text-sm font-bold text-subtle">{items.length}</span>
+          </h2>
+        </div>
+        {items.some((item) => item.expiringSoon) && (
+          <p className="rounded-full bg-butter px-3 py-1.5 text-xs font-extrabold">
+            Use soon: {items.filter((item) => item.expiringSoon).length}
+          </p>
+        )}
       </div>
-      {loading ? <div role="status" className="rounded-3xl bg-white/60 px-5 py-10 text-center font-semibold">Loading your pantry…</div>
-        : items.length === 0 ? <EmptyState title="Your pantry is ready for a first ingredient" description="Add a few things you have at home, then we’ll match them with recipes you can make." action={<Link href="#ingredient-search" className={buttonSecondary}>Add your first ingredient</Link>} />
-          : <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {items.map((item) => <li key={item.ingredientId}>
-              <article className="h-full rounded-[1.6rem] border border-white/80 bg-white/75 p-4 shadow-clay sm:p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span aria-hidden="true" className={`grid size-10 shrink-0 place-items-center rounded-2xl text-lg ${item.expiringSoon ? "bg-butter" : "bg-mint"}`}>✓</span>
-                    <div className="min-w-0"><h3 className="truncate font-extrabold">{item.name}</h3><p className="mt-0.5 text-xs text-[#765b4d]">{item.expiryDate ? `${item.expiryDate < today() ? "Expired" : "Expires"} ${prettyDate(item.expiryDate)}` : "No expiry date"}</p></div>
-                  </div>
-                  {item.expiringSoon && <span className="shrink-0 rounded-full bg-butter px-2.5 py-1 text-[11px] font-extrabold">Use soon</span>}
-                  {item.expiryDate && item.expiryDate < today() && <span className="shrink-0 rounded-full bg-[#ffe1dd] px-2.5 py-1 text-[11px] font-extrabold text-[#7b2b22]">Expired</span>}
-                </div>
-                <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_auto] items-end gap-2">
-                  <div><label htmlFor={`expiry-${item.ingredientId}`} className="mb-1.5 block text-xs font-bold">Expiry date</label><input id={`expiry-${item.ingredientId}`} type="date" min={today()} value={dates[item.ingredientId] ?? ""} onChange={(event) => setDates((current) => ({ ...current, [item.ingredientId]: event.target.value }))} className="min-h-11 w-full min-w-0 rounded-xl border border-[#d3b8a5] bg-white px-2 text-sm outline-none focus:ring-4 focus:ring-coral/20" /></div>
-                  <button type="button" onClick={() => void saveDate(item)} disabled={busyId === item.ingredientId} className="min-h-11 rounded-xl bg-lavender/70 px-3 text-xs font-extrabold transition hover:bg-lavender focus-visible:outline-4 focus-visible:outline-cocoa">Save</button>
-                  <button type="button" onClick={() => void removeItem(item)} disabled={busyId === item.ingredientId} className="min-h-11 rounded-xl border border-[#e8c2b9] bg-white px-3 text-xs font-extrabold text-[#833d32] transition hover:bg-[#fff0ed] focus-visible:outline-4 focus-visible:outline-[#833d32]">Remove</button>
-                </div>
-              </article>
-            </li>)}
-          </ul>}
+      {loading ? (
+        <div role="status" className="rounded-3xl bg-white/60 px-5 py-10 text-center font-semibold">
+          Loading your pantry…
+        </div>
+      ) : items.length === 0 ? (
+        <EmptyState
+          title="Your pantry is ready for a first ingredient"
+          description="Add a few things you have at home, then we’ll match them with recipes you can make."
+          action={
+            <Link href="#ingredient-search" className={buttonSecondary}>
+              Add your first ingredient
+            </Link>
+          }
+        />
+      ) : (
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {items.map((item) => (
+            <li key={item.ingredientId}>
+              <PantryItemCard
+                item={item}
+                date={dates[item.ingredientId] ?? ""}
+                busy={busyId === item.ingredientId}
+                onDateChange={(value) => setDates((current) => ({ ...current, [item.ingredientId]: value }))}
+                onSave={() => void saveDate(item)}
+                onRemove={() => void removeItem(item)}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
     </>
   );
 }

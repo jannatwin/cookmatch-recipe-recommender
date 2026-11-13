@@ -5,12 +5,18 @@ import { recommendationQuerySchema } from "@/lib/validation/api";
 
 export async function GET(request: Request) {
   try {
-    const { supabase, user } = await optionalUser();
+    const { supabase, user } = await optionalUser(request);
     const query = recommendationQuerySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
     if (!query.success) {
-      throw new ApiError(400, "VALIDATION_ERROR", "Recommendation filters are invalid", query.error.issues.map((issue) => ({
-        field: issue.path.join("."), issue: issue.message,
-      })));
+      throw new ApiError(
+        400,
+        "VALIDATION_ERROR",
+        "Recommendation filters are invalid",
+        query.error.issues.map((issue) => ({
+          field: issue.path.join("."),
+          issue: issue.message,
+        })),
+      );
     }
 
     let dietTagId: number | undefined;
@@ -21,9 +27,10 @@ export async function GET(request: Request) {
         .ilike("name", query.data.diet)
         .maybeSingle();
       if (error) throw new ApiError(500, "SERVER_ERROR", "Could not load dietary filter");
-      if (!tag) throw new ApiError(400, "VALIDATION_ERROR", "Unknown dietary preference", [
-        { field: "diet", issue: "no dietary tag matches this value" },
-      ]);
+      if (!tag)
+        throw new ApiError(400, "VALIDATION_ERROR", "Unknown dietary preference", [
+          { field: "diet", issue: "no dietary tag matches this value" },
+        ]);
       dietTagId = tag.id;
     }
 

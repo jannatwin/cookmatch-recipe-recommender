@@ -18,7 +18,9 @@ test("admin journey: manage catalog, publish a recipe, see it recommended", asyn
 
   // Promote the account the way README describes: directly in the (local) database.
   const service = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!);
-  const { data: me } = await (await page.request.get("/api/v1/auth/me")).json().then((body) => ({ data: body.user }));
+  const { data: me } = await (await page.request.get("/api/v1/auth/me"))
+    .json()
+    .then((body) => ({ data: body.user }));
   const { error } = await service.from("profiles").update({ role: "admin" }).eq("id", me.userId);
   expect(error).toBeNull();
 

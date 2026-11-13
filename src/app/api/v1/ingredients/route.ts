@@ -4,15 +4,17 @@ import { parseJson } from "@/lib/validation/api";
 import { normalizeIngredientName } from "@/server/services/ingredients";
 import { z } from "zod";
 
-const createIngredientSchema = z.object({
-  name: z.string().trim().min(1).max(100),
-  aliases: z.array(z.string().trim().min(1).max(100)).max(30).default([]),
-}).superRefine((input, context) => {
-  const names = [input.name, ...input.aliases].map(normalizeIngredientName);
-  if (new Set(names).size !== names.length) {
-    context.addIssue({ code: "custom", message: "Ingredient name and aliases must be unique" });
-  }
-});
+const createIngredientSchema = z
+  .object({
+    name: z.string().trim().min(1).max(100),
+    aliases: z.array(z.string().trim().min(1).max(100)).max(30).default([]),
+  })
+  .superRefine((input, context) => {
+    const names = [input.name, ...input.aliases].map(normalizeIngredientName);
+    if (new Set(names).size !== names.length) {
+      context.addIssue({ code: "custom", message: "Ingredient name and aliases must be unique" });
+    }
+  });
 
 // Ingredients used by at least one recipe the caller can see (RLS: published), for the pantry picker.
 export async function GET() {
@@ -40,7 +42,8 @@ export async function POST(request: Request) {
       p_normalized_name: normalizeIngredientName(input.name),
       p_aliases: input.aliases.map((alias) => ({ alias, normalized_alias: normalizeIngredientName(alias) })),
     });
-    if (error?.code === "23505") throw new ApiError(409, "DUPLICATE", "Ingredient name or alias already exists");
+    if (error?.code === "23505")
+      throw new ApiError(409, "DUPLICATE", "Ingredient name or alias already exists");
     if (error) throw new ApiError(400, "VALIDATION_ERROR", "Could not create ingredient");
     return Response.json({ ingredientId, name: input.name, aliases: input.aliases }, { status: 201 });
   } catch (error) {

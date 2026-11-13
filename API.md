@@ -121,6 +121,9 @@ Paginated responses include:
 | 21 | GET | `/providers/recipes?source=...` | Search a selected provider using the current pantry | User | FR-8 to FR-14 |
 | 22 | GET | `/providers/recipes/{source}/{id}` | Load selected provider recipe details | User | FR-17, FR-18 |
 | 23 | GET | `/admin/catalog` | List CookMatch-owned recipes and catalog values for admin tools | Admin | FR-20, FR-21 |
+| 24 | GET | `/favorites` | The user's saved recipes, newest first | User | FR-23 |
+| 25 | PUT | `/favorites/{recipeId}` | Save a recipe (idempotent) | User | FR-23 |
+| 26 | DELETE | `/favorites/{recipeId}` | Remove a saved recipe | User | FR-23 |
 
 ---
 
@@ -450,6 +453,16 @@ For a signed-in user, an empty pantry returns `200 OK` with an empty `data` arra
 ### 6.1 Get recipe details
 
 `GET /recipes/{id}`  ·  Public (guests get `"guest": true` and every ingredient with `inPantry: false`)
+
+Each ingredient also carries `amount` and `unit` (either may be `null`), and signed-in users get `"saved": true|false`. Guest requests to the public endpoints are limited to 120 per minute per client address and then return `429 RATE_LIMITED`.
+
+### 6.1a Saved recipes
+
+`GET /favorites` · User returns `{ "data": [{ "recipeId", "title", "imageUrl", "cookingTimeMin", "cuisine", "ingredientCount", "savedAt" }] }`.
+
+`PUT /favorites/{recipeId}` · User returns `{ "recipeId", "saved": true }`; saving twice is not an error. `DELETE /favorites/{recipeId}` · User returns `204`.
+
+Errors: `400 VALIDATION_ERROR`, `401 TOKEN_INVALID`, `404 NOT_FOUND` (unknown or unpublished recipe on save).
 
 Returns the full recipe. If the user has a pantry, the response also marks which ingredients the user has and which are missing.
 

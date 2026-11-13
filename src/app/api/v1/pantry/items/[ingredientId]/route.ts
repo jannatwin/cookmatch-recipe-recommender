@@ -29,9 +29,15 @@ export async function PATCH(request: Request, context: Context) {
     }
     const parsed = expirySchema.safeParse(body);
     if (!parsed.success) {
-      throw new ApiError(400, "VALIDATION_ERROR", "Expiry date is invalid", parsed.error.issues.map((issue) => ({
-        field: issue.path.join("."), issue: issue.message,
-      })));
+      throw new ApiError(
+        400,
+        "VALIDATION_ERROR",
+        "Expiry date is invalid",
+        parsed.error.issues.map((issue) => ({
+          field: issue.path.join("."),
+          issue: issue.message,
+        })),
+      );
     }
 
     const { data, error } = await supabase

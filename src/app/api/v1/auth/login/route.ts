@@ -12,7 +12,11 @@ export async function POST(request: Request) {
     });
     if (error || !data.user) throw new ApiError(401, "INVALID_CREDENTIALS", "Email or password is incorrect");
 
-    const { data: profile } = await supabase.from("profiles").select("display_name,role").eq("id", data.user.id).maybeSingle();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("display_name,role")
+      .eq("id", data.user.id)
+      .maybeSingle();
     return Response.json({
       user: {
         userId: data.user.id,

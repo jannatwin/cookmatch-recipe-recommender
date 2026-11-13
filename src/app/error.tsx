@@ -14,7 +14,11 @@ export default function ErrorPage({ error, retry }: { error: unknown; retry: () 
         <EmptyState
           title="Something went wrong"
           description="This page could not be shown. Your pantry and recipes are safe."
-          action={<button type="button" onClick={() => retry()} className={buttonPrimary}>Try again</button>}
+          action={
+            <button type="button" onClick={() => retry()} className={buttonPrimary}>
+              Try again
+            </button>
+          }
         />
       </div>
     </main>

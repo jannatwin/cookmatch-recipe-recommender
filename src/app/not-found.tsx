@@ -12,7 +12,11 @@ export default function NotFound() {
         <EmptyState
           title="We couldn’t find that page"
           description="It may have moved, or the link may be wrong."
-          action={<Link href="/" className={buttonPrimary}>Back to CookMatch</Link>}
+          action={
+            <Link href="/" className={buttonPrimary}>
+              Back to CookMatch
+            </Link>
+          }
         />
       </div>
     </main>

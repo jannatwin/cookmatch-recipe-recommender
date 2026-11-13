@@ -4,7 +4,7 @@ import type { Database } from "@/types/database";
 import { getPublicSupabaseEnv } from "@/lib/env";
 
 // /recipes is public: guests browse the catalog; pantry matching needs an account.
-const protectedPrefixes = ["/pantry", "/admin", "/provider-recipes"];
+const protectedPrefixes = ["/pantry", "/saved", "/admin", "/provider-recipes"];
 
 export async function proxy(request: NextRequest) {
   const nonce = btoa(crypto.randomUUID());

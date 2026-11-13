@@ -2,7 +2,7 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type Database = {
-
+  
   "graphql_public": {
           Tables: {
             [_ in never]: never
@@ -35,7 +35,7 @@ export type Database = {
                     "id"?: number,"name"?: string
                   }
                   Relationships: [
-
+                    
                   ]
                 },"dietary_tags": {
                   Row: {
@@ -49,7 +49,41 @@ export type Database = {
                     "id"?: number,"name"?: string
                   }
                   Relationships: [
-
+                    
+                  ]
+                },"favorite_recipes": {
+                  Row: {
+                    "created_at": string,"recipe_id": number,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"recipe_id": number,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"recipe_id"?: number,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "favorite_recipes_recipe_id_fkey"
+      columns: ["recipe_id"]
+isOneToOne: false
+      referencedRelation: "recipes"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"guest_request_limits": {
+                  Row: {
+                    "client_key": string,"request_count": number,"window_start": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "client_key": string,"request_count": number,"window_start": string
+                  }
+                  Update: {
+                    "client_key"?: string,"request_count"?: number,"window_start"?: string
+                  }
+                  Relationships: [
+                    
                   ]
                 },"ingredient_aliases": {
                   Row: {
@@ -83,7 +117,7 @@ isOneToOne: false
                     "created_at"?: string,"id"?: number,"name"?: string,"normalized_name"?: string
                   }
                   Relationships: [
-
+                    
                   ]
                 },"pantry_items": {
                   Row: {
@@ -123,7 +157,7 @@ isOneToOne: false
                     "created_at"?: string,"display_name"?: string,"id"?: string,"role"?: string,"updated_at"?: string
                   }
                   Relationships: [
-
+                    
                   ]
                 },"provider_request_limits": {
                   Row: {
@@ -137,7 +171,7 @@ isOneToOne: false
                     "action"?: string,"request_count"?: number,"user_id"?: string,"window_start"?: string
                   }
                   Relationships: [
-
+                    
                   ]
                 },"recipe_dietary_tags": {
                   Row: {
@@ -263,7 +297,10 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "consume_provider_request_limit":
+            "consume_guest_request_limit":
+{ Args: { "p_client_key": string,"p_limit": number }; Returns: boolean
+                           },
+"consume_provider_request_limit":
 { Args: { "p_action": string }; Returns: boolean
                            },
 "create_ingredient":
@@ -415,11 +452,11 @@ export type CompositeTypes<
 export const Constants = {
   "graphql_public": {
           Enums: {
-
+            
           }
         },"public": {
           Enums: {
-
+            
           }
         }
 } as const

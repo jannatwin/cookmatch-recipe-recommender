@@ -65,7 +65,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3100 \
 npm run test:e2e
 ```
 
-This builds the app with the local settings; run `npm run build` again afterwards before using `npm run start` with your normal environment. GitHub Actions (`.github/workflows/ci.yml`) runs lint, typecheck, unit tests, build and the database tests on every push to `main` and every pull request.
+This builds the app with the local settings; run `npm run build` again afterwards before using `npm run start` with your normal environment. GitHub Actions (`.github/workflows/ci.yml`) runs the format check, lint, typecheck, unit tests, build and the database tests on every push to `main` and every pull request.
 
 Stop the local stack with `npm run supabase:stop`. Never commit `.env.local`, Supabase secret keys, or provider API keys.
 
@@ -73,7 +73,31 @@ Stop the local stack with `npm run supabase:stop`. Never commit `.env.local`, Su
 
 `supabase/seeds/world_recipes.sql` adds another 100 CookMatch-owned recipes, 20 each for Bangladeshi, Indian, Chinese, Mexican and Thai cooking, plus the ingredients and aliases they need. It loads the same way and does not depend on the leftover seed.
 
-`supabase/seeds/recipe_images.sql` gives every seed recipe a freely licensed photo from Wikimedia Commons and puts the photographer and licence in the recipe's attribution line. Run it after the recipe seeds.
+`supabase/seeds/recipe_images.sql` gives every seed recipe a freely licensed photo from Wikimedia Commons and puts the photographer and licence in the recipe's attribution line. `supabase/seeds/recipe_quantities.sql` adds ingredient quantities (home-cooking estimates, not tested measurements). Run both after the recipe seeds.
+
+### Production database
+
+Schema changes go through migrations, never the SQL editor, so `supabase/migrations` always matches production:
+
+```bash
+npx supabase link --project-ref <your project ref>   # once
+npx supabase migration list                          # compare local and remote
+npm run db:push                                      # apply new migrations
+```
+
+If a migration was ever pasted into the SQL editor by hand, mark it as applied before pushing, otherwise `db:push` tries to run it again and fails: `npx supabase migration repair --status applied <version>` (for example `202611140001`).
+
+Seed data is optional content, not schema. Every seed file is idempotent, so there is nothing to track: to bring production up to date, run all of them in this order (SQL editor, or `psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f <file>`):
+
+1. `supabase/seed.sql`
+2. `supabase/seeds/leftover_recipes.sql`
+3. `supabase/seeds/world_recipes.sql`
+4. `supabase/seeds/recipe_images.sql`
+5. `supabase/seeds/recipe_quantities.sql`
+
+Set `SUPABASE_SECRET_KEY` in the production environment: the guest request limit uses it and is skipped without it.
+
+Code style is enforced by Prettier: `npm run format` rewrites files, `npm run format:check` is what CI runs.
 
 To regenerate Supabase TypeScript types after changing the schema, run `npm run db:types`. To make a local account an admin, sign up through the app and update that account's `profiles.role` with the local Supabase SQL editor; public registration never grants admin access.
 
