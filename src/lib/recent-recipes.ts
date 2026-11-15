@@ -1,4 +1,10 @@
-export type RecentRecipe = { recipeId: number; title: string; imageUrl: string | null };
+// title is the English title; titleBn is the Bangla one when the recipe has a translation.
+export type RecentRecipe = {
+  recipeId: number;
+  title: string;
+  titleBn?: string | null;
+  imageUrl: string | null;
+};
 
 export const RECENT_RECIPES_KEY = "cookmatch:recent-recipes";
 export const RECENT_RECIPES_LIMIT = 8;
@@ -11,6 +17,7 @@ function isRecentRecipe(value: unknown): value is RecentRecipe {
   return (
     Number.isInteger(item.recipeId) &&
     typeof item.title === "string" &&
+    (item.titleBn === undefined || item.titleBn === null || typeof item.titleBn === "string") &&
     (item.imageUrl === null || typeof item.imageUrl === "string")
   );
 }

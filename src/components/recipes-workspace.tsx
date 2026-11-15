@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { apiRequest } from "@/lib/client-api";
+import { useI18n } from "@/components/locale-provider";
 import { ProviderSearch } from "@/components/provider-search";
 import { RecentlyViewed } from "@/components/recently-viewed";
 import { RecipeCard, type RecipeSummary } from "@/components/recipe-card";
@@ -23,6 +24,7 @@ type RecommendationPage = {
 const emptyPagination = { page: 1, totalPages: 1, totalItems: 0 };
 
 export function RecipesWorkspace() {
+  const { t, plural, errorText } = useI18n();
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [cuisines, setCuisines] = useState<FilterOption[]>([]);
   const [diets, setDiets] = useState<FilterOption[]>([]);
@@ -66,7 +68,7 @@ export function RecipesWorkspace() {
       })
       .catch((cause: unknown) => {
         if (!active) return;
-        setError(cause instanceof Error ? cause.message : "Could not load recipes.");
+        setError(errorText(cause, "recipes.loadError"));
         setRecipes([]);
         setPagination(emptyPagination);
       })
@@ -76,7 +78,7 @@ export function RecipesWorkspace() {
     return () => {
       active = false;
     };
-  }, [fetchRecipes]);
+  }, [fetchRecipes, errorText]);
 
   function updateFilter(key: keyof Filters, value: string) {
     setLoading(true);
@@ -98,33 +100,32 @@ export function RecipesWorkspace() {
       setPagination(result.pagination);
       setError("");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not load more recipes.");
+      setError(errorText(cause, "recipes.loadMoreError"));
     } finally {
       setLoading(false);
     }
   }
 
   const hasFilters = Object.values(filters).some(Boolean);
-  const countLabel = hasFilters ? "match your filters" : guest ? "to browse" : "ranked for your pantry";
+  const countLabel = plural(
+    hasFilters ? "recipes.countFiltered" : guest ? "recipes.countGuest" : "recipes.countRanked",
+    pagination.totalItems,
+  );
 
   return (
     <>
       <PageHeading
-        eyebrow={guest ? "Good ideas for any kitchen" : "Good ideas, ranked for your pantry"}
-        title="Recipes for tonight"
-        description={
-          guest
-            ? "Browse the CookMatch collection and filter by time, cuisine or diet. Create a free account to rank recipes by what is in your pantry."
-            : "Start with your CookMatch recipes, then fine-tune by time, cuisine or diet. Your best pantry matches stay at the top."
-        }
+        eyebrow={guest ? t("recipes.eyebrowGuest") : t("recipes.eyebrow")}
+        title={t("recipes.title")}
+        description={guest ? t("recipes.descriptionGuest") : t("recipes.description")}
         action={
           guest ? (
             <Link href="/register" className={buttonSecondary}>
-              Match my pantry
+              {t("recipes.matchMyPantry")}
             </Link>
           ) : (
             <Link href="/pantry" className={buttonSecondary}>
-              Edit pantry
+              {t("recipes.editPantry")}
             </Link>
           )
         }
@@ -140,10 +141,8 @@ export function RecipesWorkspace() {
       />
 
       <div className="mb-4">
-        <h2 className="text-xl font-extrabold">CookMatch collection</h2>
-        <p className="mt-1 text-sm text-muted">
-          {pagination.totalItems} recipe{pagination.totalItems === 1 ? "" : "s"} {countLabel}
-        </p>
+        <h2 className="text-xl font-extrabold">{t("recipes.collection")}</h2>
+        <p className="mt-1 text-sm text-muted">{countLabel}</p>
       </div>
       {error && (
         <p
@@ -155,36 +154,32 @@ export function RecipesWorkspace() {
       )}
       {loading && recipes.length === 0 ? (
         <div role="status" className="rounded-3xl bg-white/60 px-5 py-10 text-center font-semibold">
-          Finding recipes…
+          {t("recipes.finding")}
         </div>
       ) : pantryEmpty ? (
         <EmptyState
-          title="Your pantry is empty"
-          description="Recipes are matched to the ingredients you have. Add a few to your pantry and your matches will appear here."
+          title={t("recipes.pantryEmptyTitle")}
+          description={t("recipes.pantryEmptyDescription")}
           action={
             <Link href="/pantry" className={buttonSecondary}>
-              Add pantry ingredients
+              {t("recipes.addPantryIngredients")}
             </Link>
           }
         />
       ) : recipes.length === 0 ? (
         <EmptyState
-          title="No recipes matched this time"
+          title={t("recipes.noneTitle")}
           description={
-            hasFilters
-              ? "Try widening your filters."
-              : guest
-                ? "The collection is empty right now. Please check back soon."
-                : "Add ingredients to your pantry and we’ll find recipes that fit."
+            hasFilters ? t("recipes.noneFiltered") : guest ? t("recipes.noneGuest") : t("recipes.noneUser")
           }
           action={
             hasFilters ? (
               <button type="button" onClick={clearFilters} className={buttonSecondary}>
-                Clear filters
+                {t("common.clearFilters")}
               </button>
             ) : (
               <Link href={guest ? "/" : "/pantry"} className={buttonSecondary}>
-                {guest ? "Back to home" : "Add pantry ingredients"}
+                {guest ? t("recipes.backHome") : t("recipes.addPantryIngredients")}
               </Link>
             )
           }
@@ -197,7 +192,7 @@ export function RecipesWorkspace() {
               recipe={{
                 ...recipe,
                 href: `/recipes/${recipe.recipeId}`,
-                providerLabel: "CookMatch recipe",
+                providerLabel: t("card.cookmatch"),
                 guest,
               }}
             />
@@ -212,7 +207,7 @@ export function RecipesWorkspace() {
             disabled={loading}
             className={buttonSecondary}
           >
-            {loading ? "Loading…" : "Show more recipes"}
+            {loading ? t("recipes.loadingMore") : t("recipes.showMore")}
           </button>
         </div>
       )}

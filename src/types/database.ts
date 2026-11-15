@@ -25,28 +25,28 @@ export type Database = {
           Tables: {
             "cuisines": {
                   Row: {
-                    "id": number,"name": string
+                    "id": number,"name": string,"name_bn": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "id"?: number,"name": string
+                    "id"?: number,"name": string,"name_bn"?: string | null
                   }
                   Update: {
-                    "id"?: number,"name"?: string
+                    "id"?: number,"name"?: string,"name_bn"?: string | null
                   }
                   Relationships: [
                     
                   ]
                 },"dietary_tags": {
                   Row: {
-                    "id": number,"name": string
+                    "id": number,"name": string,"name_bn": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "id"?: number,"name": string
+                    "id"?: number,"name": string,"name_bn"?: string | null
                   }
                   Update: {
-                    "id"?: number,"name"?: string
+                    "id"?: number,"name"?: string,"name_bn"?: string | null
                   }
                   Relationships: [
                     
@@ -107,14 +107,14 @@ isOneToOne: false
                   ]
                 },"ingredients": {
                   Row: {
-                    "created_at": string,"id": number,"is_staple": boolean,"name": string,"normalized_name": string
+                    "created_at": string,"id": number,"is_staple": boolean,"name": string,"name_bn": string | null,"normalized_name": string,"normalized_name_bn": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id"?: number,"is_staple"?: boolean,"name": string,"normalized_name": string
+                    "created_at"?: string,"id"?: number,"is_staple"?: boolean,"name": string,"name_bn"?: string | null,"normalized_name": string
                   }
                   Update: {
-                    "created_at"?: string,"id"?: number,"is_staple"?: boolean,"name"?: string,"normalized_name"?: string
+                    "created_at"?: string,"id"?: number,"is_staple"?: boolean,"name"?: string,"name_bn"?: string | null,"normalized_name"?: string
                   }
                   Relationships: [
                     
@@ -201,14 +201,14 @@ isOneToOne: false
                   ]
                 },"recipe_ingredients": {
                   Row: {
-                    "amount": string | null,"display_name": string | null,"ingredient_id": number,"recipe_id": number,"unit": string | null
+                    "amount": string | null,"amount_bn": string | null,"display_name": string | null,"display_name_bn": string | null,"ingredient_id": number,"recipe_id": number,"unit": string | null,"unit_bn": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "amount"?: string | null,"display_name"?: string | null,"ingredient_id": number,"recipe_id": number,"unit"?: string | null
+                    "amount"?: string | null,"amount_bn"?: string | null,"display_name"?: string | null,"display_name_bn"?: string | null,"ingredient_id": number,"recipe_id": number,"unit"?: string | null,"unit_bn"?: string | null
                   }
                   Update: {
-                    "amount"?: string | null,"display_name"?: string | null,"ingredient_id"?: number,"recipe_id"?: number,"unit"?: string | null
+                    "amount"?: string | null,"amount_bn"?: string | null,"display_name"?: string | null,"display_name_bn"?: string | null,"ingredient_id"?: number,"recipe_id"?: number,"unit"?: string | null,"unit_bn"?: string | null
                   }
                   Relationships: [
                     {
@@ -227,14 +227,14 @@ isOneToOne: false
                   ]
                 },"recipe_steps": {
                   Row: {
-                    "id": number,"instruction": string,"recipe_id": number,"step_number": number
+                    "id": number,"instruction": string,"instruction_bn": string | null,"recipe_id": number,"step_number": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "id"?: number,"instruction": string,"recipe_id": number,"step_number": number
+                    "id"?: number,"instruction": string,"instruction_bn"?: string | null,"recipe_id": number,"step_number": number
                   }
                   Update: {
-                    "id"?: number,"instruction"?: string,"recipe_id"?: number,"step_number"?: number
+                    "id"?: number,"instruction"?: string,"instruction_bn"?: string | null,"recipe_id"?: number,"step_number"?: number
                   }
                   Relationships: [
                     {
@@ -247,14 +247,14 @@ isOneToOne: false
                   ]
                 },"recipes": {
                   Row: {
-                    "attribution": string | null,"cooking_time_min": number,"created_at": string,"cuisine_id": number | null,"description": string | null,"id": number,"image_url": string | null,"is_published": boolean,"last_synced_at": string | null,"source": string | null,"source_id": string | null,"source_url": string | null,"title": string,"updated_at": string
+                    "attribution": string | null,"cooking_time_min": number,"created_at": string,"cuisine_id": number | null,"description": string | null,"description_bn": string | null,"id": number,"image_url": string | null,"is_published": boolean,"last_synced_at": string | null,"source": string | null,"source_id": string | null,"source_url": string | null,"title": string,"title_bn": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "attribution"?: string | null,"cooking_time_min": number,"created_at"?: string,"cuisine_id"?: number | null,"description"?: string | null,"id"?: number,"image_url"?: string | null,"is_published"?: boolean,"last_synced_at"?: string | null,"source"?: string | null,"source_id"?: string | null,"source_url"?: string | null,"title": string,"updated_at"?: string
+                    "attribution"?: string | null,"cooking_time_min": number,"created_at"?: string,"cuisine_id"?: number | null,"description"?: string | null,"description_bn"?: string | null,"id"?: number,"image_url"?: string | null,"is_published"?: boolean,"last_synced_at"?: string | null,"source"?: string | null,"source_id"?: string | null,"source_url"?: string | null,"title": string,"title_bn"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "attribution"?: string | null,"cooking_time_min"?: number,"created_at"?: string,"cuisine_id"?: number | null,"description"?: string | null,"id"?: number,"image_url"?: string | null,"is_published"?: boolean,"last_synced_at"?: string | null,"source"?: string | null,"source_id"?: string | null,"source_url"?: string | null,"title"?: string,"updated_at"?: string
+                    "attribution"?: string | null,"cooking_time_min"?: number,"created_at"?: string,"cuisine_id"?: number | null,"description"?: string | null,"description_bn"?: string | null,"id"?: number,"image_url"?: string | null,"is_published"?: boolean,"last_synced_at"?: string | null,"source"?: string | null,"source_id"?: string | null,"source_url"?: string | null,"title"?: string,"title_bn"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -267,14 +267,14 @@ isOneToOne: false
                   ]
                 },"substitutes": {
                   Row: {
-                    "ingredient_id": number,"note": string | null,"substitute_id": number
+                    "ingredient_id": number,"note": string | null,"note_bn": string | null,"substitute_id": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "ingredient_id": number,"note"?: string | null,"substitute_id": number
+                    "ingredient_id": number,"note"?: string | null,"note_bn"?: string | null,"substitute_id": number
                   }
                   Update: {
-                    "ingredient_id"?: number,"note"?: string | null,"substitute_id"?: number
+                    "ingredient_id"?: number,"note"?: string | null,"note_bn"?: string | null,"substitute_id"?: number
                   }
                   Relationships: [
                     {
@@ -310,7 +310,7 @@ isOneToOne: false
 { Args: { "p_recipe": Json }; Returns: number
                            },
 "get_recommendations":
-{ Args: { "p_almost_only"?: boolean,"p_cuisine_id"?: number,"p_diet_tag_id"?: number,"p_limit"?: number,"p_max_time"?: number,"p_min_score"?: number,"p_page"?: number,"p_warning_days"?: number }; Returns: {
+{ Args: { "p_almost_only"?: boolean,"p_cuisine_id"?: number,"p_diet_tag_id"?: number,"p_limit"?: number,"p_locale"?: string,"p_max_time"?: number,"p_min_score"?: number,"p_page"?: number,"p_warning_days"?: number }; Returns: {
               "almost_achievable": boolean,"cooking_time_min": number,"cuisine": string,"dietary_tags": (string)[],"expiring_count": number,"have_count": number,"image_url": string,"match_score": number,"missing_count": number,"missing_ingredients": Json,"recipe_id": number,"required_count": number,"title": string,"total_items": number
             }[]
                            },

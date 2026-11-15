@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { apiRequest } from "@/lib/client-api";
+import { useI18n } from "@/components/locale-provider";
 import { buttonPrimary, inputClass } from "@/components/ui";
 
 type Mode = "login" | "register";
 
 export function AuthForm({ mode, initialError = "" }: { mode: Mode; initialError?: string }) {
   const router = useRouter();
+  const { t, errorText } = useI18n();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,7 +32,7 @@ export function AuthForm({ mode, initialError = "" }: { mode: Mode; initialError
           body: JSON.stringify({ name, email, password }),
         });
         if (result.confirmationRequired) {
-          setNotice("Your account is ready. Check your email to confirm it, then sign in.");
+          setNotice(t("auth.confirmEmail"));
           return;
         }
       } else {
@@ -54,7 +56,7 @@ export function AuthForm({ mode, initialError = "" }: { mode: Mode; initialError
       router.replace(destination);
       router.refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "We could not complete that request.");
+      setError(errorText(cause, "auth.failed"));
     } finally {
       setBusy(false);
     }
@@ -64,22 +66,20 @@ export function AuthForm({ mode, initialError = "" }: { mode: Mode; initialError
     <div className="mx-auto w-full max-w-md rounded-[2rem] border border-white/80 bg-white/80 p-6 shadow-card sm:p-9">
       <div className="mb-7">
         <p className="mb-2 text-xs font-black uppercase tracking-[0.2em] text-clay">
-          {registering ? "A fresh start" : "Welcome back"}
+          {registering ? t("auth.registerEyebrow") : t("auth.loginEyebrow")}
         </p>
         <h1 className="text-3xl font-black tracking-tight">
-          {registering ? "Create your account" : "Sign in to CookMatch"}
+          {registering ? t("auth.registerTitle") : t("auth.loginTitle")}
         </h1>
         <p className="mt-2 leading-6 text-muted">
-          {registering
-            ? "Save your pantry and find your next favorite meal."
-            : "Your pantry and recipes are waiting for you."}
+          {registering ? t("auth.registerLead") : t("auth.loginLead")}
         </p>
       </div>
       <form onSubmit={handleSubmit} className="space-y-5">
         {registering && (
           <div>
             <label htmlFor="name" className="mb-2 block text-sm font-extrabold">
-              Your name
+              {t("auth.name")}
             </label>
             <input
               id="name"
@@ -90,13 +90,13 @@ export function AuthForm({ mode, initialError = "" }: { mode: Mode; initialError
               value={name}
               onChange={(event) => setName(event.target.value)}
               className={inputClass}
-              placeholder="e.g. Jannat"
+              placeholder={t("auth.namePlaceholder")}
             />
           </div>
         )}
         <div>
           <label htmlFor="email" className="mb-2 block text-sm font-extrabold">
-            Email address
+            {t("auth.email")}
           </label>
           <input
             id="email"
@@ -113,7 +113,7 @@ export function AuthForm({ mode, initialError = "" }: { mode: Mode; initialError
         </div>
         <div>
           <label htmlFor="password" className="mb-2 block text-sm font-extrabold">
-            Password
+            {t("auth.password")}
           </label>
           <input
             id="password"
@@ -126,7 +126,7 @@ export function AuthForm({ mode, initialError = "" }: { mode: Mode; initialError
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             className={inputClass}
-            placeholder={registering ? "At least 8 characters" : "Your password"}
+            placeholder={registering ? t("auth.passwordNewPlaceholder") : t("auth.passwordPlaceholder")}
           />
         </div>
         {error && (
@@ -140,16 +140,16 @@ export function AuthForm({ mode, initialError = "" }: { mode: Mode; initialError
           </p>
         )}
         <button type="submit" disabled={busy} className={`${buttonPrimary} w-full`}>
-          {busy ? "One moment…" : registering ? "Create account" : "Sign in"}
+          {busy ? t("auth.busy") : registering ? t("common.createAccount") : t("common.signIn")}
         </button>
       </form>
       <p className="mt-6 text-center text-sm text-muted">
-        {registering ? "Already have an account? " : "New to CookMatch? "}
+        {registering ? t("auth.haveAccount") : t("auth.newHere")}
         <Link
           href={registering ? "/login" : "/register"}
           className="font-extrabold text-cocoa underline decoration-coral decoration-2 underline-offset-4"
         >
-          {registering ? "Sign in" : "Create an account"}
+          {registering ? t("common.signIn") : t("auth.createAnAccount")}
         </Link>
       </p>
     </div>

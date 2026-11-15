@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { apiRequest } from "@/lib/client-api";
 import { IngredientCatalog, type CatalogIngredient } from "@/components/ingredient-catalog";
+import { useI18n } from "@/components/locale-provider";
 import { PantryItemCard, today, type PantryItem } from "@/components/pantry-item-card";
 import { buttonPrimary, buttonSecondary, EmptyState, inputClass, PageHeading, Panel } from "@/components/ui";
 
 type Suggestion = { ingredientId: number; name: string; matchedAlias: string | null };
 
 export function PantryWorkspace() {
+  const { t, errorText, digits } = useI18n();
   const [items, setItems] = useState<PantryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -32,11 +34,11 @@ export function PantryWorkspace() {
       setDates(Object.fromEntries(result.data.map((item) => [item.ingredientId, item.expiryDate ?? ""])));
       setError("");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not load your pantry.");
+      setError(errorText(cause, "pantry.loadError"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [errorText]);
 
   useEffect(() => {
     apiRequest<{ data: PantryItem[] }>("/api/v1/pantry")
@@ -45,14 +47,12 @@ export function PantryWorkspace() {
         setDates(Object.fromEntries(data.map((item) => [item.ingredientId, item.expiryDate ?? ""])));
         setError("");
       })
-      .catch((cause: unknown) =>
-        setError(cause instanceof Error ? cause.message : "Could not load your pantry."),
-      )
+      .catch((cause: unknown) => setError(errorText(cause, "pantry.loadError")))
       .finally(() => setLoading(false));
     apiRequest<{ data: Array<{ ingredientId: number; name: string }> }>("/api/v1/ingredients")
       .then(({ data }) => setCatalog(data))
       .catch(() => {}); // the picker is optional; typing still works
-  }, []);
+  }, [errorText]);
 
   useEffect(() => {
     // Several ingredients can be entered separated by commas; suggest for the one being typed.
@@ -144,14 +144,11 @@ export function PantryWorkspace() {
         });
         added.push(created.name);
       } catch (cause) {
-        failed.push({
-          name,
-          reason: cause instanceof Error ? cause.message : "Could not add that ingredient.",
-        });
+        failed.push({ name, reason: errorText(cause, "pantry.addError") });
       }
     }
     if (added.length) {
-      setNotice(`${added.join(", ")} added to your pantry.`);
+      setNotice(t("pantry.added", { names: added.join(", ") }));
       await loadPantry();
     }
     if (failed.length)
@@ -176,10 +173,10 @@ export function PantryWorkspace() {
         method: "PATCH",
         body: JSON.stringify({ expiryDate: dates[item.ingredientId] || null }),
       });
-      setNotice(`${item.name} expiry date updated.`);
+      setNotice(t("pantry.dateUpdated", { name: item.name }));
       await loadPantry();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not update the expiry date.");
+      setError(errorText(cause, "pantry.dateError"));
     } finally {
       setBusyId(null);
     }
@@ -192,9 +189,9 @@ export function PantryWorkspace() {
     try {
       await apiRequest<void>(`/api/v1/pantry/items/${item.ingredientId}`, { method: "DELETE" });
       setItems((current) => current.filter((entry) => entry.ingredientId !== item.ingredientId));
-      setNotice(`${item.name} removed from your pantry.`);
+      setNotice(t("pantry.removed", { name: item.name }));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not remove that ingredient.");
+      setError(errorText(cause, "pantry.removeError"));
     } finally {
       setBusyId(null);
     }
@@ -203,12 +200,12 @@ export function PantryWorkspace() {
   return (
     <>
       <PageHeading
-        eyebrow="Your kitchen, organized"
-        title="My pantry"
-        description="Keep the ingredients you have on hand in one place. Add expiry dates to use the freshest food first."
+        eyebrow={t("pantry.eyebrow")}
+        title={t("pantry.title")}
+        description={t("pantry.description")}
         action={
           <Link href="/recipes" className={buttonPrimary}>
-            Find recipes{" "}
+            {t("pantry.findRecipes")}{" "}
             <span aria-hidden="true" className="ml-2">
               →
             </span>
@@ -224,17 +221,14 @@ export function PantryWorkspace() {
             ＋
           </span>
           <div>
-            <h2 className="text-xl font-extrabold">Add ingredients</h2>
-            <p className="mt-1 text-sm text-muted">
-              Start typing to see matching ingredients, then press Tab or Enter to complete. Separate several
-              with commas.
-            </p>
+            <h2 className="text-xl font-extrabold">{t("pantry.addTitle")}</h2>
+            <p className="mt-1 text-sm text-muted">{t("pantry.addHelp")}</p>
           </div>
         </div>
         <form onSubmit={addItem} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_12rem_auto] lg:items-end">
           <div className="relative">
             <label htmlFor="ingredient-search" className="mb-2 block text-sm font-bold">
-              Ingredients
+              {t("pantry.ingredientsLabel")}
             </label>
             <input
               id="ingredient-search"
@@ -247,7 +241,7 @@ export function PantryWorkspace() {
               }}
               onKeyDown={handleSuggestionKeys}
               className={inputClass}
-              placeholder="e.g. egg, tomato, piyaj"
+              placeholder={t("pantry.placeholder")}
               autoComplete="off"
               role="combobox"
               aria-autocomplete="list"
@@ -263,7 +257,7 @@ export function PantryWorkspace() {
               <ul
                 id="ingredient-suggestions"
                 role="listbox"
-                aria-label="Ingredient suggestions"
+                aria-label={t("pantry.suggestions")}
                 className="absolute inset-x-0 top-full z-20 mt-2 max-h-64 overflow-auto rounded-2xl border border-line-strong bg-white p-2 shadow-xl"
               >
                 {suggestions.map((suggestion, index) => (
@@ -280,7 +274,9 @@ export function PantryWorkspace() {
                     >
                       <span>{suggestion.name}</span>
                       <span className="text-xs font-medium text-muted">
-                        {suggestion.matchedAlias ? `alias: ${suggestion.matchedAlias}` : "ingredient"}
+                        {suggestion.matchedAlias
+                          ? t("pantry.suggestionAlias", { alias: suggestion.matchedAlias })
+                          : t("pantry.suggestionIngredient")}
                       </span>
                     </button>
                   </li>
@@ -289,13 +285,14 @@ export function PantryWorkspace() {
             )}
             {noMatchFor && (
               <p role="status" className="mt-2 text-sm font-semibold text-danger">
-                No ingredient matches “{noMatchFor}”. Check the spelling or try another name.
+                {t("pantry.noMatch", { query: noMatchFor })}
               </p>
             )}
           </div>
           <div>
             <label htmlFor="new-expiry" className="mb-2 block text-sm font-bold">
-              Expiry date <span className="font-medium text-subtle">(optional)</span>
+              {t("pantry.expiryDate")}{" "}
+              <span className="font-medium text-subtle">{t("common.optional")}</span>
             </label>
             <input
               id="new-expiry"
@@ -307,7 +304,7 @@ export function PantryWorkspace() {
             />
           </div>
           <button type="submit" disabled={busy || !query.trim()} className={buttonPrimary}>
-            {busy ? "Adding…" : "Add to pantry"}
+            {busy ? t("pantry.adding") : t("pantry.addButton")}
           </button>
         </form>
         <IngredientCatalog ingredients={catalog} pantry={items} onPick={pickFromCatalog} />
@@ -330,26 +327,27 @@ export function PantryWorkspace() {
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-extrabold">
-            In your kitchen <span className="ml-1 text-sm font-bold text-subtle">{items.length}</span>
+            {t("pantry.inKitchen")}{" "}
+            <span className="ml-1 text-sm font-bold text-subtle">{digits(items.length)}</span>
           </h2>
         </div>
         {items.some((item) => item.expiringSoon) && (
           <p className="rounded-full bg-butter px-3 py-1.5 text-xs font-extrabold">
-            Use soon: {items.filter((item) => item.expiringSoon).length}
+            {t("pantry.useSoonCount", { count: items.filter((item) => item.expiringSoon).length })}
           </p>
         )}
       </div>
       {loading ? (
         <div role="status" className="rounded-3xl bg-white/60 px-5 py-10 text-center font-semibold">
-          Loading your pantry…
+          {t("pantry.loading")}
         </div>
       ) : items.length === 0 ? (
         <EmptyState
-          title="Your pantry is ready for a first ingredient"
-          description="Add a few things you have at home, then we’ll match them with recipes you can make."
+          title={t("pantry.emptyTitle")}
+          description={t("pantry.emptyDescription")}
           action={
             <Link href="#ingredient-search" className={buttonSecondary}>
-              Add your first ingredient
+              {t("pantry.emptyAction")}
             </Link>
           }
         />

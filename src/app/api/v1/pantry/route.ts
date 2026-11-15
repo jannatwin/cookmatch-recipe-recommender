@@ -1,5 +1,6 @@
 import { ApiError, apiErrorResponse } from "@/lib/api/errors";
 import { requireUser } from "@/lib/auth/require-user";
+import { getLocale } from "@/lib/i18n/server";
 import { listPantry, replacePantry } from "@/server/services/pantry";
 import { parseJson, replacePantrySchema } from "@/lib/validation/api";
 import {
@@ -11,7 +12,7 @@ import {
 export async function GET() {
   try {
     const { supabase, user } = await requireUser();
-    return Response.json({ data: await listPantry(supabase, user.id) });
+    return Response.json({ data: await listPantry(supabase, user.id, await getLocale()) });
   } catch (error) {
     return apiErrorResponse(error);
   }
@@ -54,7 +55,7 @@ export async function PUT(request: Request) {
       throw new ApiError(409, "DUPLICATE", "The pantry contains the same ingredient more than once");
     }
 
-    return Response.json({ data: await replacePantry(supabase, user.id, resolved) });
+    return Response.json({ data: await replacePantry(supabase, user.id, resolved, await getLocale()) });
   } catch (error) {
     return apiErrorResponse(error);
   }

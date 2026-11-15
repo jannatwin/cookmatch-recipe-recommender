@@ -4,18 +4,22 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { apiRequest } from "@/lib/client-api";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { useI18n } from "@/components/locale-provider";
+import type { MessageKey } from "@/lib/i18n/translate";
 
 type CurrentUser = { userId: string; name: string; email: string; role: "user" | "admin" };
 
-const links = [
-  { href: "/pantry", label: "My pantry" },
-  { href: "/recipes", label: "Recipes" },
-  { href: "/saved", label: "Saved" },
+const links: Array<{ href: string; label: MessageKey }> = [
+  { href: "/pantry", label: "nav.pantry" },
+  { href: "/recipes", label: "nav.recipes" },
+  { href: "/saved", label: "nav.saved" },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { t, errorText } = useI18n();
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState("");
@@ -40,7 +44,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             .catch(() => {})
             .then(() => router.replace(`/login?next=${encodeURIComponent(pathname)}`));
         } else {
-          setError(cause instanceof Error ? cause.message : "Could not verify your session.");
+          setError(errorText(cause, "nav.sessionError"));
         }
       })
       .finally(() => {
@@ -49,7 +53,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [pathname, router, guestPage]);
+  }, [pathname, router, guestPage, errorText]);
 
   async function signOut() {
     setSigningOut(true);
@@ -58,7 +62,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       router.replace("/login");
       router.refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not sign out.");
+      setError(errorText(cause, "nav.signOutError"));
       setSigningOut(false);
     }
   }
@@ -71,11 +75,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             <>
               <p>{error}</p>
               <Link className="mt-3 inline-block underline" href="/login">
-                Go to sign in
+                {t("nav.goToSignIn")}
               </Link>
             </>
           ) : (
-            "Getting your kitchen ready…"
+            t("nav.loading")
           )}
         </div>
       </main>
@@ -85,7 +89,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const allLinks = !user
     ? links.filter((item) => item.href === "/recipes")
     : user.role === "admin"
-      ? [...links, { href: "/admin", label: "Admin" }]
+      ? [...links, { href: "/admin", label: "nav.admin" as const }]
       : links;
   return (
     <div className="min-h-screen pb-24 md:pb-0">
@@ -103,7 +107,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </span>
             <span className="text-xl font-black tracking-tight">CookMatch</span>
           </Link>
-          <nav aria-label="Main navigation" className="hidden items-center gap-1 md:flex">
+          <nav aria-label={t("nav.main")} className="hidden items-center gap-1 md:flex">
             {allLinks.map((item) => {
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
@@ -113,16 +117,17 @@ export function AppShell({ children }: { children: ReactNode }) {
                   aria-current={active ? "page" : undefined}
                   className={`rounded-full px-4 py-2 text-sm font-bold transition hover:bg-white/80 ${active ? "bg-white text-cocoa shadow-sm" : "text-muted"}`}
                 >
-                  {item.label}
+                  {t(item.label)}
                 </Link>
               );
             })}
           </nav>
           {user ? (
             <div className="flex items-center gap-2 sm:gap-3">
+              <LanguageSwitcher />
               <div className="hidden text-right sm:block">
                 <p className="max-w-40 truncate text-sm font-extrabold">{user.name}</p>
-                <p className="text-xs text-muted">{user.role === "admin" ? "Kitchen admin" : "Home cook"}</p>
+                <p className="text-xs text-muted">{user.role === "admin" ? t("nav.roleAdmin") : t("nav.roleUser")}</p>
               </div>
               <button
                 type="button"
@@ -130,25 +135,26 @@ export function AppShell({ children }: { children: ReactNode }) {
                 disabled={signingOut}
                 className="min-h-11 rounded-full border border-line-strong bg-white/70 px-4 text-sm font-bold transition hover:bg-white focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-cocoa disabled:opacity-60"
               >
-                <span className="hidden sm:inline">{signingOut ? "Signing out…" : "Sign out"}</span>
-                <span className="sm:hidden" aria-label="Sign out">
-                  Exit
+                <span className="hidden sm:inline">{signingOut ? t("nav.signingOut") : t("nav.signOut")}</span>
+                <span className="sm:hidden" aria-label={t("nav.signOut")}>
+                  {t("nav.exit")}
                 </span>
               </button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
+              <LanguageSwitcher />
               <Link
                 href={`/login?next=${encodeURIComponent(pathname)}`}
                 className="inline-flex min-h-11 items-center rounded-full border border-line-strong bg-white/70 px-4 text-sm font-bold transition hover:bg-white focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-cocoa"
               >
-                Sign in
+                {t("common.signIn")}
               </Link>
               <Link
                 href="/register"
                 className="hidden min-h-11 items-center rounded-full bg-coral px-4 text-sm font-extrabold shadow-button focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-cocoa sm:inline-flex"
               >
-                Create account
+                {t("common.createAccount")}
               </Link>
             </div>
           )}
@@ -161,7 +167,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       )}
       <main className="mx-auto max-w-7xl px-4 py-7 sm:px-7 sm:py-10 lg:px-9">{children}</main>
       <nav
-        aria-label="Mobile navigation"
+        aria-label={t("nav.mobile")}
         className="fixed inset-x-0 bottom-0 z-40 border-t border-line-strong bg-cream/95 px-3 pb-[max(env(safe-area-inset-bottom),0.65rem)] pt-2 backdrop-blur-xl md:hidden"
       >
         <div
@@ -176,7 +182,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 aria-current={active ? "page" : undefined}
                 className={`grid min-h-12 place-items-center rounded-2xl text-xs font-extrabold ${active ? "bg-coral/30" : "text-muted"}`}
               >
-                {item.label}
+                {t(item.label)}
               </Link>
             );
           })}

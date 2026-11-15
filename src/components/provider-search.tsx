@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { apiRequest } from "@/lib/client-api";
+import { useI18n } from "@/components/locale-provider";
 import { RecipeCard, type MissingIngredient } from "@/components/recipe-card";
 import { buttonSecondary } from "@/components/ui";
 
@@ -21,6 +22,7 @@ type ProviderRecommendation = {
 };
 
 export function ProviderSearch() {
+  const { t, errorText, apiMessage } = useI18n();
   const [recipes, setRecipes] = useState<ProviderRecommendation[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -34,10 +36,9 @@ export function ProviderSearch() {
         "/api/v1/providers/recipes?source=spoonacular&limit=6",
       );
       setRecipes(result.data);
-      if (!result.data.length)
-        setMessage(result.hint ?? "Spoonacular did not find a match for these pantry items.");
+      if (!result.data.length) setMessage(result.hint ? apiMessage(result.hint) : t("provider.none"));
     } catch (cause) {
-      setMessage(cause instanceof Error ? cause.message : "Spoonacular is unavailable right now.");
+      setMessage(errorText(cause, "provider.unavailable"));
     } finally {
       setBusy(false);
     }
@@ -47,15 +48,12 @@ export function ProviderSearch() {
     <section className="mt-12 rounded-[2rem] border border-lavender-line bg-lavender/40 p-5 sm:p-7">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-plum">Optional provider search</p>
-          <h2 className="mt-1 text-xl font-extrabold">Want a few more ideas?</h2>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-plum">
-            Search Spoonacular using your pantry. This uses your provider quota and is limited to 30 searches
-            per hour.
-          </p>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-plum">{t("provider.eyebrow")}</p>
+          <h2 className="mt-1 text-xl font-extrabold">{t("provider.title")}</h2>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-plum">{t("provider.description")}</p>
         </div>
         <button type="button" onClick={() => void search()} disabled={busy} className={buttonSecondary}>
-          {busy ? "Searching…" : "Search Spoonacular"}
+          {busy ? t("provider.searching") : t("provider.search")}
         </button>
       </div>
       {message && (
@@ -71,7 +69,7 @@ export function ProviderSearch() {
               recipe={{
                 ...recipe,
                 href: `/provider-recipes/spoonacular/${recipe.sourceId}`,
-                providerLabel: "Spoonacular",
+                providerLabel: t("card.spoonacular"),
               }}
             />
           ))}
