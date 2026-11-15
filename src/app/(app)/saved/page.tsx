@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
 import { SavedRecipes } from "@/components/saved-recipes";
+import { pageMetadata } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "Saved recipes · CookMatch" };
+export const generateMetadata = () => pageMetadata("meta.saved");
 
 export default function SavedPage() {
   return <SavedRecipes />;

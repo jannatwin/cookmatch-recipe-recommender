@@ -1,5 +1,6 @@
 import { ApiError, apiErrorResponse } from "@/lib/api/errors";
 import { requireUser } from "@/lib/auth/require-user";
+import { getLocale } from "@/lib/i18n/server";
 import { resolveIngredient } from "@/server/services/ingredients";
 import { listPantry } from "@/server/services/pantry";
 import { pantryItemInputSchema, parseJson } from "@/lib/validation/api";
@@ -17,7 +18,9 @@ export async function POST(request: Request) {
     if (error?.code === "23505") throw new ApiError(409, "DUPLICATE", "Ingredient is already in the pantry");
     if (error) throw new ApiError(500, "SERVER_ERROR", "Could not add pantry ingredient");
 
-    const created = (await listPantry(supabase, user.id)).find((item) => item.ingredientId === ingredient.id);
+    const created = (await listPantry(supabase, user.id, await getLocale())).find(
+      (item) => item.ingredientId === ingredient.id,
+    );
     return Response.json(created, { status: 201 });
   } catch (error) {
     return apiErrorResponse(error);

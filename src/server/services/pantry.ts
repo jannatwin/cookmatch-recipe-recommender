@@ -1,9 +1,11 @@
 import { ApiError } from "@/lib/api/errors";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/types/database";
+import { localized, type Locale } from "@/lib/i18n/config";
 import { isExpiringSoon } from "./matching";
 
-export async function listPantry(supabase: SupabaseClient<Database>, userId: string) {
+// Ingredient names are English unless a locale is given: provider searches rely on the English names.
+export async function listPantry(supabase: SupabaseClient<Database>, userId: string, locale: Locale = "en") {
   const { data: items, error } = await supabase
     .from("pantry_items")
     .select("ingredient_id,expiry_date")
@@ -16,11 +18,13 @@ export async function listPantry(supabase: SupabaseClient<Database>, userId: str
 
   const { data: ingredients, error: ingredientError } = await supabase
     .from("ingredients")
-    .select("id,name")
+    .select("id,name,name_bn")
     .in("id", ids);
   if (ingredientError) throw new ApiError(500, "SERVER_ERROR", "Could not load pantry ingredients");
 
-  const byId = new Map(ingredients.map((ingredient) => [ingredient.id, ingredient.name]));
+  const byId = new Map(
+    ingredients.map((ingredient) => [ingredient.id, localized(locale, ingredient.name, ingredient.name_bn)]),
+  );
   return items.map((item) => ({
     ingredientId: item.ingredient_id,
     name: byId.get(item.ingredient_id) ?? "Unknown ingredient",
@@ -33,6 +37,7 @@ export async function replacePantry(
   supabase: SupabaseClient<Database>,
   userId: string,
   items: Array<{ ingredientId: number; expiryDate?: string | null }>,
+  locale: Locale = "en",
 ) {
   const payload = items.map((item) => ({
     ingredient_id: item.ingredientId,
@@ -41,5 +46,5 @@ export async function replacePantry(
 
   const { error } = await supabase.rpc("replace_pantry_items", { p_items: payload as Json });
   if (error) throw new ApiError(400, "VALIDATION_ERROR", "Could not save pantry items");
-  return listPantry(supabase, userId);
+  return listPantry(supabase, userId, locale);
 }

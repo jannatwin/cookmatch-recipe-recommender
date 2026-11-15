@@ -64,10 +64,13 @@ export function EmptyState({
 export function RecipeImage({
   src,
   alt,
+  noImageLabel,
   className = "",
 }: {
   src: string | null;
   alt: string;
+  /** Accessible name of the placeholder shown when there is no photo. */
+  noImageLabel?: string;
   className?: string;
 }) {
   if (!src) {
@@ -75,7 +78,7 @@ export function RecipeImage({
       <div
         role="img"
         className={`grid place-items-center bg-gradient-to-br from-peach via-butter to-mint text-5xl ${className}`}
-        aria-label={`${alt}, no image available`}
+        aria-label={noImageLabel ?? alt}
       >
         <span aria-hidden="true">◌</span>
       </div>

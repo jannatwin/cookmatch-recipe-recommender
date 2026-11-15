@@ -5,9 +5,14 @@ import { normalizeIngredientName } from "@/server/services/ingredients";
 import { z } from "zod";
 
 const bodySchema = z
-  .object({ name: z.string().trim().min(1).max(100).optional(), isStaple: z.boolean().optional() })
-  .refine((body) => body.name !== undefined || body.isStaple !== undefined, {
-    message: "provide name or isStaple",
+  .object({
+    name: z.string().trim().min(1).max(100).optional(),
+    // An empty string or null removes the Bangla name.
+    nameBn: z.string().trim().max(100).nullable().optional(),
+    isStaple: z.boolean().optional(),
+  })
+  .refine((body) => body.name !== undefined || body.nameBn !== undefined || body.isStaple !== undefined, {
+    message: "provide name, nameBn or isStaple",
   });
 type Context = { params: Promise<{ id: string }> };
 
@@ -25,9 +30,15 @@ export async function PATCH(request: Request, context: Context) {
   try {
     const { supabase } = await requireAdmin();
     const ingredientId = await getIngredientId(context);
-    const { name, isStaple } = await parseJson(request, bodySchema);
-    const changes: { name?: string; normalized_name?: string; is_staple?: boolean } = {};
+    const { name, nameBn, isStaple } = await parseJson(request, bodySchema);
+    const changes: {
+      name?: string;
+      normalized_name?: string;
+      name_bn?: string | null;
+      is_staple?: boolean;
+    } = {};
     if (isStaple !== undefined) changes.is_staple = isStaple;
+    if (nameBn !== undefined) changes.name_bn = nameBn || null;
     if (name !== undefined) {
       const normalized = normalizeIngredientName(name);
       // normalized_name is unique among ingredients; aliases share the lookup namespace, so check them too.
@@ -46,13 +57,24 @@ export async function PATCH(request: Request, context: Context) {
       .from("ingredients")
       .update(changes)
       .eq("id", ingredientId)
-      .select("id,name,is_staple")
+      .select("id,name,name_bn,is_staple")
       .maybeSingle();
     if (error?.code === "23505")
-      throw new ApiError(409, "DUPLICATE", "Ingredient name or alias already exists");
+      throw new ApiError(
+        409,
+        "DUPLICATE",
+        name === undefined && nameBn !== undefined
+          ? "Another ingredient already has this Bangla name"
+          : "Ingredient name or alias already exists",
+      );
     if (error) throw new ApiError(400, "VALIDATION_ERROR", "Could not update ingredient");
     if (!data) throw new ApiError(404, "NOT_FOUND", "Ingredient was not found");
-    return Response.json({ ingredientId: data.id, name: data.name, isStaple: data.is_staple });
+    return Response.json({
+      ingredientId: data.id,
+      name: data.name,
+      nameBn: data.name_bn,
+      isStaple: data.is_staple,
+    });
   } catch (error) {
     return apiErrorResponse(error);
   }

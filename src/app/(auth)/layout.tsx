@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
@@ -26,6 +27,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           <span className="text-xl font-black tracking-tight">CookMatch</span>
         </Link>
         {children}
+        <LanguageSwitcher className="mx-auto mt-6 w-fit" />
       </div>
     </main>
   );
