@@ -1,7 +1,7 @@
+import type { Metadata } from "next";
 import { RecipeDetail } from "@/components/recipe-detail";
-import { pageMetadata } from "@/lib/i18n/server";
 
-export const generateMetadata = () => pageMetadata("meta.recipe");
+export const metadata: Metadata = { title: "Recipe · CookMatch" };
 
 export default async function RecipePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

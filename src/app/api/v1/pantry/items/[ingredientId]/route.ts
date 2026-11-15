@@ -1,6 +1,5 @@
 import { ApiError, apiErrorResponse } from "@/lib/api/errors";
 import { requireUser } from "@/lib/auth/require-user";
-import { getLocale } from "@/lib/i18n/server";
 import { listPantry } from "@/server/services/pantry";
 import { dateOnlySchema } from "@/lib/validation/api";
 import { z } from "zod";
@@ -50,9 +49,7 @@ export async function PATCH(request: Request, context: Context) {
       .maybeSingle();
     if (error) throw new ApiError(500, "SERVER_ERROR", "Could not update pantry ingredient");
     if (!data) throw new ApiError(404, "NOT_FOUND", "Pantry ingredient was not found");
-    const updated = (await listPantry(supabase, user.id, await getLocale())).find(
-      (item) => item.ingredientId === ingredientId,
-    );
+    const updated = (await listPantry(supabase, user.id)).find((item) => item.ingredientId === ingredientId);
     return Response.json(updated);
   } catch (error) {
     return apiErrorResponse(error);

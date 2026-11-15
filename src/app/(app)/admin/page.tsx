@@ -1,7 +1,7 @@
+import type { Metadata } from "next";
 import { AdminWorkspace } from "@/components/admin-workspace";
-import { pageMetadata } from "@/lib/i18n/server";
 
-export const generateMetadata = () => pageMetadata("meta.admin");
+export const metadata: Metadata = { title: "Kitchen admin · CookMatch" };
 
 export default function AdminPage() {
   return <AdminWorkspace />;

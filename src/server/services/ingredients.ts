@@ -24,19 +24,17 @@ export async function resolveIngredient(
   if (!name) throw new ApiError(400, "VALIDATION_ERROR", "Ingredient name is required");
   const normalized = normalizeIngredientName(name);
 
-  // A name can be the English name, an alias, or the Bangla name, in that order of precedence.
-  const [
-    { data: ingredient, error: ingredientError },
-    { data: alias, error: aliasError },
-    { data: bangla, error: banglaError },
-  ] = await Promise.all([
-    supabase.from("ingredients").select("id,name").eq("normalized_name", normalized).maybeSingle(),
-    supabase.from("ingredient_aliases").select("ingredient_id").eq("normalized_alias", normalized).maybeSingle(),
-    supabase.from("ingredients").select("id,name").eq("normalized_name_bn", normalized).maybeSingle(),
-  ]);
+  const [{ data: ingredient, error: ingredientError }, { data: alias, error: aliasError }] =
+    await Promise.all([
+      supabase.from("ingredients").select("id,name").eq("normalized_name", normalized).maybeSingle(),
+      supabase
+        .from("ingredient_aliases")
+        .select("ingredient_id")
+        .eq("normalized_alias", normalized)
+        .maybeSingle(),
+    ]);
 
-  if (ingredientError || aliasError || banglaError)
-    throw new ApiError(500, "SERVER_ERROR", "Could not look up ingredient");
+  if (ingredientError || aliasError) throw new ApiError(500, "SERVER_ERROR", "Could not look up ingredient");
   if (ingredient) return ingredient;
   if (alias) {
     const { data, error } = await supabase
@@ -47,7 +45,6 @@ export async function resolveIngredient(
     if (error || !data) throw new ApiError(500, "SERVER_ERROR", "Ingredient alias is invalid");
     return data;
   }
-  if (bangla) return bangla;
 
   throw new ApiError(422, "UNKNOWN_INGREDIENT", `Ingredient '${name}' was not recognized`, [
     { field: "name", issue: "no ingredient or alias matches this name" },
@@ -56,33 +53,20 @@ export async function resolveIngredient(
 
 export async function resolveIngredientNames(supabase: SupabaseClient<Database>, names: string[]) {
   const normalizedNames = [...new Set(names.map(normalizeIngredientName))];
-  const [
-    { data: ingredients, error: ingredientsError },
-    { data: aliases, error: aliasesError },
-    { data: banglaMatches, error: banglaError },
-  ] = await Promise.all([
-    supabase
-      .from("ingredients")
-      .select("id,name,normalized_name,is_staple")
-      .in("normalized_name", normalizedNames),
-    supabase
-      .from("ingredient_aliases")
-      .select("ingredient_id,normalized_alias")
-      .in("normalized_alias", normalizedNames),
-    supabase
-      .from("ingredients")
-      .select("id,name,normalized_name_bn,is_staple")
-      .in("normalized_name_bn", normalizedNames),
-  ]);
+  const [{ data: ingredients, error: ingredientsError }, { data: aliases, error: aliasesError }] =
+    await Promise.all([
+      supabase
+        .from("ingredients")
+        .select("id,name,normalized_name,is_staple")
+        .in("normalized_name", normalizedNames),
+      supabase
+        .from("ingredient_aliases")
+        .select("ingredient_id,normalized_alias")
+        .in("normalized_alias", normalizedNames),
+    ]);
 
-  if (ingredientsError || aliasesError || banglaError)
+  if (ingredientsError || aliasesError)
     throw new ApiError(500, "SERVER_ERROR", "Could not look up ingredients");
-  const byBanglaName = new Map(
-    (banglaMatches ?? []).map((item) => [
-      item.normalized_name_bn,
-      { id: item.id, name: item.name, isStaple: item.is_staple },
-    ]),
-  );
   const byName = new Map(
     (ingredients ?? []).map((item) => [
       item.normalized_name,
@@ -104,8 +88,7 @@ export async function resolveIngredientNames(supabase: SupabaseClient<Database>,
 
   return new Map(
     normalizedNames.flatMap((normalized) => {
-      const result =
-        byName.get(normalized) ?? byId.get(aliasToId.get(normalized) ?? -1) ?? byBanglaName.get(normalized);
+      const result = byName.get(normalized) ?? byId.get(aliasToId.get(normalized) ?? -1);
       return result ? [[normalized, result] as const] : [];
     }),
   );

@@ -1,13 +1,11 @@
 import { ApiError, apiErrorResponse } from "@/lib/api/errors";
 import { optionalUser } from "@/lib/auth/require-user";
-import { getLocale } from "@/lib/i18n/server";
 import { EXPIRY_WARNING_DAYS } from "@/server/services/matching";
 import { recommendationQuerySchema } from "@/lib/validation/api";
 
 export async function GET(request: Request) {
   try {
     const { supabase, user } = await optionalUser(request);
-    const locale = await getLocale();
     const query = recommendationQuerySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
     if (!query.success) {
       throw new ApiError(
@@ -23,15 +21,12 @@ export async function GET(request: Request) {
 
     let dietTagId: number | undefined;
     if (query.data.diet) {
-      // The filter sends the tag's name as displayed, so accept the English or the Bangla name.
-      const pattern = query.data.diet.replace(/[\\%_]/g, "\\$&");
-      const [english, bangla] = await Promise.all([
-        supabase.from("dietary_tags").select("id").ilike("name", pattern).limit(1),
-        supabase.from("dietary_tags").select("id").eq("name_bn", query.data.diet).limit(1),
-      ]);
-      if (english.error || bangla.error)
-        throw new ApiError(500, "SERVER_ERROR", "Could not load dietary filter");
-      const tag = english.data[0] ?? bangla.data[0];
+      const { data: tag, error } = await supabase
+        .from("dietary_tags")
+        .select("id")
+        .ilike("name", query.data.diet)
+        .maybeSingle();
+      if (error) throw new ApiError(500, "SERVER_ERROR", "Could not load dietary filter");
       if (!tag)
         throw new ApiError(400, "VALIDATION_ERROR", "Unknown dietary preference", [
           { field: "diet", issue: "no dietary tag matches this value" },
@@ -64,7 +59,6 @@ export async function GET(request: Request) {
       p_warning_days: EXPIRY_WARNING_DAYS,
       p_page: query.data.page,
       p_limit: query.data.limit,
-      p_locale: locale,
     });
     if (error) throw new ApiError(500, "SERVER_ERROR", "Could not calculate recommendations");
 

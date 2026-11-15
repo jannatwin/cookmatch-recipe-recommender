@@ -1,6 +1,5 @@
 "use client";
 
-import { useI18n } from "@/components/locale-provider";
 import { inputClass, Panel } from "@/components/ui";
 
 export type Filters = {
@@ -13,6 +12,20 @@ export type Filters = {
 export type FilterOption = { value: string; label: string };
 
 export const initialFilters: Filters = { cuisine: "", maxTime: "", diet: "", almostOnly: "", minScore: "" };
+
+const timeOptions: FilterOption[] = [
+  { value: "15", label: "15 minutes" },
+  { value: "30", label: "30 minutes" },
+  { value: "45", label: "45 minutes" },
+  { value: "60", label: "1 hour" },
+];
+
+const matchOptions: FilterOption[] = [
+  { value: "25", label: "25% match" },
+  { value: "50", label: "50% match" },
+  { value: "75", label: "75% match" },
+  { value: "100", label: "Full match" },
+];
 
 function FilterSelect({
   id,
@@ -61,23 +74,16 @@ export function RecipeFilters({
   onChange: (key: keyof Filters, value: string) => void;
   onClear: () => void;
 }) {
-  const { t } = useI18n();
   const hasFilters = Object.values(filters).some(Boolean);
-  const timeOptions: FilterOption[] = [
-    ...[15, 30, 45].map((count) => ({ value: String(count), label: t("filters.minutes", { count }) })),
-    { value: "60", label: t("filters.oneHour") },
-  ];
-  const matchOptions: FilterOption[] = [
-    ...[25, 50, 75].map((count) => ({ value: String(count), label: t("filters.percentMatch", { count }) })),
-    { value: "100", label: t("filters.fullMatch") },
-  ];
   return (
     <Panel className="mb-8">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-extrabold">{t("filters.title")}</h2>
+          <h2 className="text-lg font-extrabold">Find your kind of dinner</h2>
           <p className="mt-1 text-sm text-muted">
-            {showMatchFilters ? t("filters.helpMatch") : t("filters.help")}
+            {showMatchFilters
+              ? "Filters work together and keep the match ranking. Staples such as salt and oil count for less in the score."
+              : "Filters work together."}
           </p>
         </div>
         {hasFilters && (
@@ -86,31 +92,31 @@ export function RecipeFilters({
             onClick={onClear}
             className="min-h-10 rounded-full px-3 text-sm font-bold underline underline-offset-4 focus-visible:outline-4 focus-visible:outline-cocoa"
           >
-            {t("common.clearFilters")}
+            Clear filters
           </button>
         )}
       </div>
       <div className={`grid gap-3 sm:grid-cols-2 ${showMatchFilters ? "lg:grid-cols-5" : "lg:grid-cols-3"}`}>
         <FilterSelect
           id="cuisine"
-          label={t("filters.cuisine")}
-          anyLabel={t("filters.anyCuisine")}
+          label="Cuisine"
+          anyLabel="Any cuisine"
           value={filters.cuisine}
           options={cuisines}
           onChange={(value) => onChange("cuisine", value)}
         />
         <FilterSelect
           id="max-time"
-          label={t("filters.readyWithin")}
-          anyLabel={t("filters.anyTime")}
+          label="Ready within"
+          anyLabel="Any time"
           value={filters.maxTime}
           options={timeOptions}
           onChange={(value) => onChange("maxTime", value)}
         />
         <FilterSelect
           id="diet"
-          label={t("filters.diet")}
-          anyLabel={t("filters.anyDiet")}
+          label="Dietary preference"
+          anyLabel="Any preference"
           value={filters.diet}
           options={diets}
           onChange={(value) => onChange("diet", value)}
@@ -119,8 +125,8 @@ export function RecipeFilters({
           <>
             <FilterSelect
               id="match-score"
-              label={t("filters.minMatch")}
-              anyLabel={t("filters.anyMatch")}
+              label="At least this match"
+              anyLabel="Any match"
               value={filters.minScore}
               options={matchOptions}
               onChange={(value) => onChange("minScore", value)}
@@ -132,7 +138,7 @@ export function RecipeFilters({
                 onChange={(event) => onChange("almostOnly", event.target.checked ? "true" : "")}
                 className="size-5 accent-coral-deep"
               />
-              {t("filters.almost")}
+              Almost achievable
             </label>
           </>
         )}

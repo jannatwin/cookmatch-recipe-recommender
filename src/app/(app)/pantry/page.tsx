@@ -1,7 +1,7 @@
+import type { Metadata } from "next";
 import { PantryWorkspace } from "@/components/pantry-workspace";
-import { pageMetadata } from "@/lib/i18n/server";
 
-export const generateMetadata = () => pageMetadata("meta.pantry");
+export const metadata: Metadata = { title: "My pantry · CookMatch" };
 
 export default function PantryPage() {
   return <PantryWorkspace />;

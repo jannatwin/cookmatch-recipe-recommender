@@ -1,7 +1,4 @@
-"use client";
-
 import Link from "next/link";
-import { useI18n } from "@/components/locale-provider";
 import { RecipeImage } from "@/components/ui";
 
 export type MissingIngredient = {
@@ -29,7 +26,6 @@ export type RecipeSummary = {
 };
 
 export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
-  const { t, plural, digits } = useI18n();
   const matched = recipe.matchScore >= 80;
   return (
     <article className="group overflow-hidden rounded-[1.8rem] border border-white/80 bg-white/80 shadow-clay transition duration-200 hover:-translate-y-1 hover:shadow-lift motion-reduce:transition-none">
@@ -39,31 +35,22 @@ export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
       >
         <div className="relative h-48 sm:h-52">
           <div className="absolute inset-0 transition duration-300 group-hover:scale-[1.03] motion-reduce:transition-none">
-            <RecipeImage
-              src={recipe.imageUrl}
-              alt={recipe.title}
-              noImageLabel={t("common.noImage", { title: recipe.title })}
-              className="size-full"
-            />
+            <RecipeImage src={recipe.imageUrl} alt={recipe.title} className="size-full" />
           </div>
           <div className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1.5 text-xs font-black shadow-sm">
-            {recipe.providerLabel ?? t("card.cookmatch")}
+            {recipe.providerLabel ?? "CookMatch recipe"}
           </div>
           {!recipe.guest && (
             <div
               className={`absolute right-3 top-3 min-w-14 rounded-2xl border-2 px-2.5 py-2 text-center shadow-sm ${matched ? "border-mint-deep bg-mint" : "border-butter-deep bg-butter"}`}
             >
-              <span className="block text-lg font-black leading-none">
-                {digits(Math.round(recipe.matchScore))}%
-              </span>
-              <span className="mt-1 block text-[9px] font-extrabold uppercase tracking-wide">
-                {t("card.match")}
-              </span>
+              <span className="block text-lg font-black leading-none">{Math.round(recipe.matchScore)}%</span>
+              <span className="mt-1 block text-[9px] font-extrabold uppercase tracking-wide">match</span>
             </div>
           )}
           {!recipe.guest && recipe.almostAchievable && (
             <div className="absolute bottom-3 left-3 rounded-full bg-butter px-3 py-1.5 text-xs font-extrabold shadow-sm">
-              {t("card.almost", { count: recipe.missingCount })}
+              Almost there · {recipe.missingCount} missing
             </div>
           )}
         </div>
@@ -73,7 +60,7 @@ export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
               <h2 className="line-clamp-2 text-xl font-black leading-tight">{recipe.title}</h2>
               <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold text-muted">
                 {recipe.cuisine && <span>{recipe.cuisine}</span>}
-                {recipe.cookingTimeMin && <span>{t("common.minutes", { count: recipe.cookingTimeMin })}</span>}
+                {recipe.cookingTimeMin && <span>{recipe.cookingTimeMin} min</span>}
               </p>
             </div>
             <span
@@ -86,21 +73,19 @@ export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
           {recipe.guest ? (
             <p className="mt-4 text-sm font-bold">
               <span className="rounded-full bg-mint px-3 py-1">
-                {plural("card.ingredients", recipe.requiredCount)}
+                {recipe.requiredCount} ingredient{recipe.requiredCount === 1 ? "" : "s"}
               </span>
             </p>
           ) : (
             <>
               <div className="mt-4 flex items-center gap-2 text-sm font-bold">
                 <span className="rounded-full bg-mint px-3 py-1">
-                  {t("card.have", { have: recipe.haveCount, required: recipe.requiredCount })}
+                  Have {recipe.haveCount}/{recipe.requiredCount}
                 </span>
                 <span
                   className={`rounded-full px-3 py-1 ${recipe.missingCount ? "bg-peach" : "bg-mint-soft"}`}
                 >
-                  {recipe.missingCount
-                    ? t("card.missing", { count: recipe.missingCount })
-                    : t("card.allIngredients")}
+                  {recipe.missingCount ? `Missing ${recipe.missingCount}` : "All ingredients"}
                 </span>
               </div>
               {recipe.missingIngredients.length > 0 && (
@@ -112,15 +97,13 @@ export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
                     >
                       {item.name}
                       {item.substitutes?.[0] && (
-                        <span className="font-semibold text-plum">
-                          {t("card.orUse", { name: item.substitutes[0].name })}
-                        </span>
+                        <span className="font-semibold text-plum"> · or use {item.substitutes[0].name}</span>
                       )}
                     </span>
                   ))}
                   {recipe.missingIngredients.length > 3 && (
                     <span className="px-1 py-1 text-xs font-bold text-muted">
-                      {t("card.more", { count: recipe.missingIngredients.length - 3 })}
+                      +{recipe.missingIngredients.length - 3} more
                     </span>
                   )}
                 </div>
@@ -128,7 +111,9 @@ export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
             </>
           )}
           {recipe.expiringCount ? (
-            <p className="mt-3 text-xs font-bold text-muted">{plural("card.expiring", recipe.expiringCount)}</p>
+            <p className="mt-3 text-xs font-bold text-muted">
+              ◷ Uses {recipe.expiringCount} ingredient{recipe.expiringCount === 1 ? "" : "s"} expiring soon
+            </p>
           ) : null}
           {recipe.dietaryTags && recipe.dietaryTags.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">

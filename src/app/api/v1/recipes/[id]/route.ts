@@ -1,7 +1,5 @@
 import { ApiError, apiErrorResponse } from "@/lib/api/errors";
 import { optionalUser, requireAdmin } from "@/lib/auth/require-user";
-import { localized } from "@/lib/i18n/config";
-import { getLocale } from "@/lib/i18n/server";
 import { parseJson } from "@/lib/validation/api";
 import { recipeInputSchema, toRecipeRpcInput } from "@/lib/validation/recipe";
 import { matchScore } from "@/server/services/matching";
@@ -12,7 +10,6 @@ type Context = { params: Promise<{ id: string }> };
 export async function GET(request: Request, context: Context) {
   try {
     const { supabase, user } = await optionalUser(request);
-    const locale = await getLocale();
     const parsedId = z.coerce
       .number()
       .int()
@@ -23,9 +20,7 @@ export async function GET(request: Request, context: Context) {
 
     const { data: recipe, error: recipeError } = await supabase
       .from("recipes")
-      .select(
-        "id,title,title_bn,description,description_bn,cuisine_id,cooking_time_min,image_url,source_url,attribution",
-      )
+      .select("id,title,description,cuisine_id,cooking_time_min,image_url,source_url,attribution")
       .eq("id", recipeId) // RLS hides drafts from non-admins, so admins can preview them here.
       .maybeSingle();
     if (recipeError) throw new ApiError(500, "SERVER_ERROR", "Could not load recipe");
@@ -34,11 +29,11 @@ export async function GET(request: Request, context: Context) {
     const [links, steps, tags, pantry, cuisineResult, favorite] = await Promise.all([
       supabase
         .from("recipe_ingredients")
-        .select("ingredient_id,display_name,display_name_bn,amount,amount_bn,unit,unit_bn")
+        .select("ingredient_id,display_name,amount,unit")
         .eq("recipe_id", recipeId),
       supabase
         .from("recipe_steps")
-        .select("step_number,instruction,instruction_bn")
+        .select("step_number,instruction")
         .eq("recipe_id", recipeId)
         .order("step_number"),
       supabase.from("recipe_dietary_tags").select("tag_id").eq("recipe_id", recipeId),
@@ -46,7 +41,7 @@ export async function GET(request: Request, context: Context) {
         ? supabase.from("pantry_items").select("ingredient_id").eq("user_id", user.id)
         : Promise.resolve({ data: [], error: null }),
       recipe.cuisine_id
-        ? supabase.from("cuisines").select("name,name_bn").eq("id", recipe.cuisine_id).maybeSingle()
+        ? supabase.from("cuisines").select("name").eq("id", recipe.cuisine_id).maybeSingle()
         : Promise.resolve({ data: null, error: null }),
       user
         ? supabase.from("favorite_recipes").select("recipe_id").eq("recipe_id", recipeId).maybeSingle()
@@ -60,10 +55,10 @@ export async function GET(request: Request, context: Context) {
     const tagIds = tags.data.map((tag) => tag.tag_id);
     const [ingredients, dietaryTags] = await Promise.all([
       ingredientIds.length
-        ? supabase.from("ingredients").select("id,name,name_bn,is_staple").in("id", ingredientIds)
+        ? supabase.from("ingredients").select("id,name,is_staple").in("id", ingredientIds)
         : Promise.resolve({ data: [], error: null }),
       tagIds.length
-        ? supabase.from("dietary_tags").select("id,name,name_bn").in("id", tagIds)
+        ? supabase.from("dietary_tags").select("id,name").in("id", tagIds)
         : Promise.resolve({ data: [], error: null }),
     ]);
     if (ingredients.error || dietaryTags.error)
@@ -75,21 +70,18 @@ export async function GET(request: Request, context: Context) {
     const substituteRows = missingIds.length
       ? await supabase
           .from("substitutes")
-          .select("ingredient_id,substitute_id,note,note_bn")
+          .select("ingredient_id,substitute_id,note")
           .in("ingredient_id", missingIds)
       : { data: [], error: null };
     if (substituteRows.error)
       throw new ApiError(500, "SERVER_ERROR", "Could not load ingredient substitutes");
     const substituteIds = [...new Set(substituteRows.data.map((row) => row.substitute_id))];
     const substituteIngredients = substituteIds.length
-      ? await supabase.from("ingredients").select("id,name,name_bn").in("id", substituteIds)
+      ? await supabase.from("ingredients").select("id,name").in("id", substituteIds)
       : { data: [], error: null };
     if (substituteIngredients.error) throw new ApiError(500, "SERVER_ERROR", "Could not load substitutes");
     const substituteNames = new Map(
-      substituteIngredients.data.map((ingredient) => [
-        ingredient.id,
-        localized(locale, ingredient.name, ingredient.name_bn),
-      ]),
+      substituteIngredients.data.map((ingredient) => [ingredient.id, ingredient.name]),
     );
     const substitutesByIngredient = new Map<
       number,
@@ -99,11 +91,7 @@ export async function GET(request: Request, context: Context) {
       const name = substituteNames.get(substitute.substitute_id);
       if (!name) continue;
       const list = substitutesByIngredient.get(substitute.ingredient_id) ?? [];
-      list.push({
-        ingredientId: substitute.substitute_id,
-        name,
-        note: localized(locale, substitute.note, substitute.note_bn),
-      });
+      list.push({ ingredientId: substitute.substitute_id, name, note: substitute.note });
       substitutesByIngredient.set(substitute.ingredient_id, list);
     }
 
@@ -113,14 +101,10 @@ export async function GET(request: Request, context: Context) {
       return [
         {
           ingredientId: ingredient.id,
-          // Bangla: the recipe's own wording first, then the ingredient's Bangla name, then English.
-          name:
-            localized(locale, null, link.display_name_bn ?? ingredient.name_bn) ??
-            link.display_name ??
-            ingredient.name,
-          amount: localized(locale, link.amount, link.amount_bn),
+          name: link.display_name ?? ingredient.name,
+          amount: link.amount,
           staple: ingredient.is_staple,
-          unit: localized(locale, link.unit, link.unit_bn),
+          unit: link.unit,
           inPantry: pantryIds.has(ingredient.id),
           ...(!pantryIds.has(ingredient.id)
             ? { substitutes: substitutesByIngredient.get(ingredient.id) ?? [] }
@@ -135,24 +119,16 @@ export async function GET(request: Request, context: Context) {
       // A failed favourites lookup must not block the recipe itself: it just reads as not saved.
       saved: Boolean(favorite.data),
       recipeId: recipe.id,
-      title: localized(locale, recipe.title, recipe.title_bn),
-      // Both titles, so the browser's "recently viewed" list can follow a later language change.
-      titleEn: recipe.title,
-      titleBn: recipe.title_bn,
-      description: localized(locale, recipe.description, recipe.description_bn),
-      cuisine: cuisineResult.data
-        ? localized(locale, cuisineResult.data.name, cuisineResult.data.name_bn)
-        : null,
+      title: recipe.title,
+      description: recipe.description,
+      cuisine: cuisineResult.data?.name ?? null,
       cookingTimeMin: recipe.cooking_time_min,
       imageUrl: recipe.image_url,
       sourceUrl: recipe.source_url,
       attribution: recipe.attribution,
-      dietaryTags: dietaryTags.data.map((tag) => localized(locale, tag.name, tag.name_bn)),
+      dietaryTags: dietaryTags.data.map((tag) => tag.name),
       ingredients: recipeIngredients,
-      steps: steps.data.map((step) => ({
-        stepNumber: step.step_number,
-        instruction: localized(locale, step.instruction, step.instruction_bn),
-      })),
+      steps: steps.data.map((step) => ({ stepNumber: step.step_number, instruction: step.instruction })),
       matchScore: matchScore(
         haveCount,
         requiredCount,

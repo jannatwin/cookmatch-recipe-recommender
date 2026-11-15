@@ -1,6 +1,5 @@
 "use client";
 
-import { useI18n } from "@/components/locale-provider";
 import type { PantryItem } from "@/components/pantry-item-card";
 
 export type CatalogIngredient = { ingredientId: number; name: string };
@@ -15,15 +14,15 @@ export function IngredientCatalog({
   pantry: PantryItem[];
   onPick: (name: string) => void;
 }) {
-  const { t, digits } = useI18n();
   if (!ingredients.length) return null;
   return (
     <div className="mt-6 border-t border-line pt-5">
       <h3 className="text-sm font-extrabold">
-        {t("pantry.catalogTitle")}{" "}
-        <span className="ml-1 font-bold text-subtle">{digits(ingredients.length)}</span>
+        Ingredients list <span className="ml-1 font-bold text-subtle">{ingredients.length}</span>
       </h3>
-      <p className="mt-1 text-sm text-muted">{t("pantry.catalogHelp")}</p>
+      <p className="mt-1 text-sm text-muted">
+        Everything our recipes use. Pick the ones you have, then press Add to pantry.
+      </p>
       <ul className="mt-3 flex max-h-56 flex-wrap gap-2 overflow-auto p-1">
         {ingredients.map((ingredient) => {
           const owned = pantry.some((item) => item.ingredientId === ingredient.ingredientId);
@@ -37,7 +36,7 @@ export function IngredientCatalog({
               >
                 {owned && <span aria-hidden="true">✓ </span>}
                 {ingredient.name}
-                {owned && <span className="sr-only"> {t("pantry.catalogOwned")}</span>}
+                {owned && <span className="sr-only"> (in your pantry)</span>}
               </button>
             </li>
           );

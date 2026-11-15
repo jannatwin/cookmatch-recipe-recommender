@@ -52,12 +52,5 @@ body {
   margin: 0;
   background: var(--color-cream);
   color: var(--color-cocoa);
-  /* Latin text stays in Arial; Bangla characters fall through to the self-hosted Noto Sans Bengali. */
-  font-family: Arial, Helvetica, var(--font-bangla), "Noto Sans Bengali", "Nirmala UI", sans-serif;
-}
-
-/* Bangla letters carry marks above and below the line, so tight heading leading clips them. */
-:lang(bn) :is(h1, h2, h3) {
-  line-height: 1.35;
-  letter-spacing: normal;
+  font-family: Arial, Helvetica, sans-serif;
 }

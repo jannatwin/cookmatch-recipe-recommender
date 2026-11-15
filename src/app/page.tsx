@@ -1,15 +1,17 @@
 import Link from "next/link";
-import { LanguageSwitcher } from "@/components/language-switcher";
 import { buttonPrimary, buttonSecondary } from "@/components/ui";
-import { getTranslator } from "@/lib/i18n/server";
 
-export default async function HomePage() {
-  const { t, digits } = await getTranslator();
-  const highlights = [
-    { number: digits("01"), title: t("home.step1Title"), detail: t("home.step1Detail") },
-    { number: digits("02"), title: t("home.step2Title"), detail: t("home.step2Detail") },
-    { number: digits("03"), title: t("home.step3Title"), detail: t("home.step3Detail") },
-  ];
+const highlights = [
+  { number: "01", title: "Stock your pantry", detail: "Keep track of what is already in your kitchen." },
+  { number: "02", title: "Find your match", detail: "See recipes ranked by the ingredients you have." },
+  {
+    number: "03",
+    title: "Cook with less waste",
+    detail: "Use ingredients before they reach their expiry date.",
+  },
+];
+
+export default function HomePage() {
   return (
     <main className="min-h-screen overflow-hidden bg-cream text-cocoa">
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-7 lg:px-9">
@@ -25,13 +27,12 @@ export default async function HomePage() {
           </span>
           <span className="text-xl font-black tracking-tight">CookMatch</span>
         </Link>
-        <nav aria-label={t("home.accountNav")} className="flex items-center gap-2">
-          <LanguageSwitcher />
-          <Link href="/login" className={`${buttonSecondary} hidden px-4 sm:inline-flex`}>
-            {t("common.signIn")}
+        <nav aria-label="Account" className="flex items-center gap-2">
+          <Link href="/login" className={`${buttonSecondary} px-4`}>
+            Sign in
           </Link>
           <Link href="/register" className={`${buttonPrimary} px-4`}>
-            {t("home.getStarted")}
+            Get started
           </Link>
         </nav>
       </header>
@@ -39,35 +40,36 @@ export default async function HomePage() {
       <section className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 pb-16 pt-10 sm:px-7 sm:pb-24 sm:pt-16 lg:grid-cols-[1.05fr_0.95fr] lg:px-9 lg:py-24">
         <div className="relative z-10 max-w-2xl">
           <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-line bg-white/70 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-muted">
-            <span className="size-2 rounded-full bg-leaf" aria-hidden="true" /> {t("home.badge")}
+            <span className="size-2 rounded-full bg-leaf" aria-hidden="true" /> Good food starts at home
           </p>
           <h1 className="text-5xl font-black leading-[1.04] tracking-[-0.05em] sm:text-6xl lg:text-7xl">
-            {t("home.titleBefore")}{" "}
+            What can you{" "}
             <span className="relative inline-block whitespace-nowrap">
-              {t("home.titleHighlight")}
+              cook
               <span
                 aria-hidden="true"
                 className="absolute -bottom-1 left-0 z-0 h-4 w-full rounded-full bg-coral/50"
               />
             </span>{" "}
-            {t("home.titleAfter")}
+            with what you have?
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-8 text-muted sm:text-xl">
-            {t("home.lead")}
+            Add what is in your kitchen. CookMatch finds the recipes that fit, spots what is missing, and
+            helps you waste less.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href="/register" className={buttonPrimary}>
-              {t("home.buildPantry")}{" "}
+              Build my pantry{" "}
               <span aria-hidden="true" className="ml-2">
                 →
               </span>
             </Link>
             <Link href="/recipes" className={buttonSecondary}>
-              {t("common.browseRecipes")}
+              Browse recipes
             </Link>
           </div>
           <p className="mt-5 text-sm font-semibold text-subtle">
-            {t("home.tagline")}
+            A little less food waste. A lot more dinner inspiration.
           </p>
         </div>
 
@@ -79,10 +81,8 @@ export default async function HomePage() {
           <div className="relative rounded-[2.5rem] border border-white/80 bg-paper p-5 shadow-hero sm:p-7">
             <div className="mb-5 flex items-center justify-between">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-clay">
-                  {t("home.cardEyebrow")}
-                </p>
-                <h2 className="mt-1 text-2xl font-black">{t("home.cardTitle")}</h2>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-clay">Tonight’s kitchen</p>
+                <h2 className="mt-1 text-2xl font-black">Your pantry, at a glance</h2>
               </div>
               <span
                 className="grid size-12 place-items-center rounded-2xl bg-butter text-xl"
@@ -92,36 +92,33 @@ export default async function HomePage() {
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {t("home.sampleItems")
-                .split(", ")
-                .map((item, index) => (
-                  <span
-                    key={item}
-                    className={`rounded-full px-4 py-2 text-sm font-bold ${index % 2 ? "bg-peach" : "bg-mint"}`}
-                  >
-                    {item}
-                  </span>
-                ))}
+              {["Eggs", "Tomatoes", "Rice", "Onion", "Garlic", "Olive oil"].map((item, index) => (
+                <span
+                  key={item}
+                  className={`rounded-full px-4 py-2 text-sm font-bold ${index % 2 ? "bg-peach" : "bg-mint"}`}
+                >
+                  {item}
+                </span>
+              ))}
             </div>
             <div className="my-6 h-px bg-line" />
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-subtle">
-                  {t("home.sampleLabel")}
+                  Sample pantry match
                 </p>
-                <p className="mt-1 text-lg font-black">{t("home.sampleRecipe")}</p>
-                <p className="mt-1 text-sm text-muted">{t("home.sampleMeta")}</p>
+                <p className="mt-1 text-lg font-black">Tomato egg curry</p>
+                <p className="mt-1 text-sm text-muted">Ready in 25 minutes · 1 item missing</p>
               </div>
               <div className="grid size-[4.25rem] shrink-0 place-items-center rounded-full border-[5px] border-mint-deep bg-mint text-center text-sm font-black leading-tight">
-                {t("home.samplePercent")}
-                <span className="block text-[9px]">{t("home.sampleMatch")}</span>
+                80%<span className="block text-[9px]">MATCH</span>
               </div>
             </div>
             <div className="mt-5 rounded-2xl bg-butter/70 px-4 py-3 text-sm font-semibold">
               <span className="mr-2" aria-hidden="true">
                 ◷
               </span>
-              {t("home.sampleTip")}
+              Your tomatoes are nearly ripe. Use them tonight.
             </div>
           </div>
           <div
@@ -142,9 +139,9 @@ export default async function HomePage() {
       <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-7 sm:pb-24 lg:px-9">
         <div className="rounded-[2.5rem] bg-peach-soft p-6 sm:p-10 lg:p-12">
           <div className="mb-8 max-w-xl">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-clay">{t("home.stepsEyebrow")}</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-clay">Simple as supper</p>
             <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
-              {t("home.stepsTitle")}
+              A good meal is already in there.
             </h2>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
@@ -159,7 +156,7 @@ export default async function HomePage() {
         </div>
       </section>
       <footer className="border-t border-line px-4 py-6 text-center text-sm text-muted">
-        {t("home.footer")}
+        CookMatch · Make something good with what you have.
       </footer>
     </main>
   );

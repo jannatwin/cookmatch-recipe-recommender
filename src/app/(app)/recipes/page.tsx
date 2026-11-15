@@ -1,7 +1,7 @@
+import type { Metadata } from "next";
 import { RecipesWorkspace } from "@/components/recipes-workspace";
-import { pageMetadata } from "@/lib/i18n/server";
 
-export const generateMetadata = () => pageMetadata("meta.recipes");
+export const metadata: Metadata = { title: "Recipes · CookMatch" };
 
 export default function RecipesPage() {
   return <RecipesWorkspace />;

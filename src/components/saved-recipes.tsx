@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/client-api";
-import { useI18n } from "@/components/locale-provider";
 import { RecipeCard } from "@/components/recipe-card";
 import { buttonSecondary, EmptyState, PageHeading } from "@/components/ui";
 
@@ -17,7 +16,6 @@ type SavedRecipe = {
 };
 
 export function SavedRecipes() {
-  const { t, errorText } = useI18n();
   const [recipes, setRecipes] = useState<SavedRecipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -29,7 +27,7 @@ export function SavedRecipes() {
         if (active) setRecipes(data);
       })
       .catch((cause: unknown) => {
-        if (active) setError(errorText(cause, "saved.loadError"));
+        if (active) setError(cause instanceof Error ? cause.message : "Could not load saved recipes.");
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -37,17 +35,17 @@ export function SavedRecipes() {
     return () => {
       active = false;
     };
-  }, [errorText]);
+  }, []);
 
   return (
     <>
       <PageHeading
-        eyebrow={t("saved.eyebrow")}
-        title={t("saved.title")}
-        description={t("saved.description")}
+        eyebrow="Your cookbook"
+        title="Saved recipes"
+        description="Recipes you have saved, newest first. Open one to see how well it matches your pantry today."
         action={
           <Link href="/recipes" className={buttonSecondary}>
-            {t("common.browseRecipes")}
+            Browse recipes
           </Link>
         }
       />
@@ -61,15 +59,15 @@ export function SavedRecipes() {
       )}
       {loading ? (
         <div role="status" className="rounded-3xl bg-white/60 px-5 py-10 text-center font-semibold">
-          {t("saved.loading")}
+          Loading saved recipes…
         </div>
       ) : recipes.length === 0 && !error ? (
         <EmptyState
-          title={t("saved.emptyTitle")}
-          description={t("saved.emptyDescription")}
+          title="No saved recipes yet"
+          description="Tap “Save recipe” on any recipe to keep it here for later."
           action={
             <Link href="/recipes" className={buttonSecondary}>
-              {t("saved.emptyAction")}
+              Find something to save
             </Link>
           }
         />
@@ -89,7 +87,7 @@ export function SavedRecipes() {
                 missingCount: 0,
                 matchScore: 0,
                 missingIngredients: [],
-                providerLabel: t("card.saved"),
+                providerLabel: "Saved",
                 guest: true,
               }}
             />

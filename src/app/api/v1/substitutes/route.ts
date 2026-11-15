@@ -7,7 +7,6 @@ const mappingBaseSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   substituteId: z.coerce.number().int().positive(),
   note: z.string().trim().max(255).optional().default(""),
-  noteBn: z.string().trim().max(255).optional().default(""),
 });
 
 const mappingSchema = mappingBaseSchema.refine((input) => input.ingredientId !== input.substituteId, {
@@ -23,7 +22,6 @@ export async function POST(request: Request) {
       ingredient_id: input.ingredientId,
       substitute_id: input.substituteId,
       note: input.note || null,
-      note_bn: input.noteBn || null,
     });
     if (error?.code === "23505") throw new ApiError(409, "DUPLICATE", "Substitute mapping already exists");
     if (error?.code === "23503") throw new ApiError(404, "NOT_FOUND", "Ingredient was not found");
@@ -33,7 +31,6 @@ export async function POST(request: Request) {
         ingredientId: input.ingredientId,
         substituteId: input.substituteId,
         note: input.note || null,
-        noteBn: input.noteBn || null,
       },
       { status: 201 },
     );

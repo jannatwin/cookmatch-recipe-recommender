@@ -236,15 +236,6 @@ Implement these primary screens:
 
 Design mobile-first and verify keyboard use, visible focus, labels, semantic headings, contrast, reduced motion and screen reader announcements for autocomplete/results. Claymorphism must not make text low-contrast or controls hard to identify. Keep loading, empty, provider error and unauthorized states explicit.
 
-### 9.1 English / Bangla
-
-- The interface is offered in English (`en`) and Bangla (`bn`). The EN / বাং toggle (`src/components/language-switcher.tsx`) sits in the header of the landing page, the auth pages and the app shell.
-- The choice is stored in the `cookmatch_locale` cookie (one year). Without it the browser's `Accept-Language` decides, then English. The server reads it in `src/lib/i18n/server.ts`, sets `<html lang>` and renders every page in that language; switching reloads the page.
-- Interface text lives in `src/lib/i18n/messages/en.ts` and `bn.ts`. TypeScript requires every English key to exist in Bangla, and `translate.test.ts` checks that placeholders match. Numbers are shown in Bangla digits in Bangla.
-- Catalog text has optional `*_bn` columns (migration `202611170001_bangla_translations.sql`). Anything without a Bangla value falls back to English. The JSON API keeps answering in English; known API messages are translated in the browser.
-- Bangla glyphs use Noto Sans Bengali, self-hosted through `next/font` (allowed by the `font-src 'self'` CSP) and not preloaded, so English pages only download it when Bangla text is shown.
-- The migration must be applied to the Supabase project **before** this code is deployed: the API selects the `*_bn` columns and passes `p_locale` to the recommendation function.
-
 ## 10. Build phases and completion gates
 
 Do the phases in order. Keep each phase reviewable and update this guide if a deliberate requirement change is approved.

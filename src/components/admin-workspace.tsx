@@ -2,30 +2,24 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { apiRequest } from "@/lib/client-api";
-import { useI18n } from "@/components/locale-provider";
-import type { MessageKey } from "@/lib/i18n/translate";
 import { buttonPrimary, buttonSecondary, EmptyState, inputClass, PageHeading, Panel } from "@/components/ui";
 
-// The catalog is edited in its canonical English form, with the optional Bangla text beside it.
-type Ingredient = { ingredientId: number; name: string; nameBn?: string | null; isStaple?: boolean };
+type Ingredient = { ingredientId: number; name: string; isStaple?: boolean };
 type Alias = { aliasId: number; ingredientId: number; alias: string };
-type Option = { cuisineId: number; name: string; nameBn?: string | null };
-type Tag = { tagId: number; name: string; nameBn?: string | null };
-type Substitute = { ingredientId: number; substituteId: number; note: string | null; noteBn?: string | null };
-type Step = { instruction: string; instructionBn: string };
+type Option = { cuisineId: number; name: string };
+type Tag = { tagId: number; name: string };
+type Substitute = { ingredientId: number; substituteId: number; note: string | null };
 type EditableRecipe = {
   recipeId: number;
   title: string;
-  titleBn: string;
   description: string;
-  descriptionBn: string;
   cuisineId: number | null;
   cookingTimeMin: number;
   imageUrl: string;
   isPublished: boolean;
   ingredientIds: number[];
   dietaryTagIds: number[];
-  steps: Step[];
+  steps: Array<{ instruction: string }>;
 };
 type Catalog = {
   recipes: EditableRecipe[];
@@ -40,37 +34,31 @@ type RecipeDraft = Omit<EditableRecipe, "recipeId"> & { recipeId: number | null 
 const newRecipe = (): RecipeDraft => ({
   recipeId: null,
   title: "",
-  titleBn: "",
   description: "",
-  descriptionBn: "",
   cuisineId: null,
   cookingTimeMin: 30,
   imageUrl: "",
   isPublished: false,
   ingredientIds: [],
   dietaryTagIds: [],
-  steps: [{ instruction: "", instructionBn: "" }],
+  steps: [{ instruction: "" }],
 });
 
 export function AdminWorkspace() {
-  const { t, errorText, digits } = useI18n();
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"recipes" | "ingredients">("recipes");
   const [draft, setDraft] = useState<RecipeDraft>(newRecipe());
   const [ingredientSearch, setIngredientSearch] = useState("");
   const [ingredientName, setIngredientName] = useState("");
-  const [ingredientNameBn, setIngredientNameBn] = useState("");
   const [aliasesInput, setAliasesInput] = useState("");
   const [aliasIngredientId, setAliasIngredientId] = useState("");
   const [aliasText, setAliasText] = useState("");
   const [substituteIngredientId, setSubstituteIngredientId] = useState("");
   const [substituteId, setSubstituteId] = useState("");
   const [substituteNote, setSubstituteNote] = useState("");
-  const [substituteNoteBn, setSubstituteNoteBn] = useState("");
   const [labelKind, setLabelKind] = useState<"cuisines" | "dietary-tags">("cuisines");
   const [labelName, setLabelName] = useState("");
-  const [labelNameBn, setLabelNameBn] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -81,11 +69,11 @@ export function AdminWorkspace() {
       setCatalog(result);
       setError("");
     } catch (cause) {
-      setError(errorText(cause, "admin.loadError"));
+      setError(cause instanceof Error ? cause.message : "Could not load the catalog.");
     } finally {
       setLoading(false);
     }
-  }, [errorText]);
+  }, []);
 
   useEffect(() => {
     apiRequest<Catalog>("/api/v1/admin/catalog")
@@ -93,18 +81,18 @@ export function AdminWorkspace() {
         setCatalog(result);
         setError("");
       })
-      .catch((cause: unknown) => setError(errorText(cause, "admin.loadError")))
+      .catch((cause: unknown) =>
+        setError(cause instanceof Error ? cause.message : "Could not load the catalog."),
+      )
       .finally(() => setLoading(false));
-  }, [errorText]);
+  }, []);
 
   function editRecipe(recipe: EditableRecipe) {
     setDraft({
       ...recipe,
       ingredientIds: [...recipe.ingredientIds],
       dietaryTagIds: [...recipe.dietaryTagIds],
-      steps: recipe.steps.length
-        ? recipe.steps.map((step) => ({ ...step }))
-        : [{ instruction: "", instructionBn: "" }],
+      steps: recipe.steps.length ? recipe.steps.map((step) => ({ ...step })) : [{ instruction: "" }],
     });
     setTab("recipes");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -131,28 +119,29 @@ export function AdminWorkspace() {
       };
       const path = draft.recipeId ? `/api/v1/recipes/${draft.recipeId}` : "/api/v1/recipes";
       await apiRequest(path, { method: draft.recipeId ? "PUT" : "POST", body: JSON.stringify(body) });
-      setNotice(draft.recipeId ? t("admin.recipeUpdated") : t("admin.recipeCreated"));
+      setNotice(draft.recipeId ? "Recipe updated." : "Recipe created.");
       setDraft(newRecipe());
       await loadCatalog();
     } catch (cause) {
-      setError(errorText(cause, "admin.recipeSaveError"));
+      setError(cause instanceof Error ? cause.message : "Could not save the recipe.");
     } finally {
       setBusy(false);
     }
   }
 
   async function deleteRecipe(recipe: EditableRecipe) {
-    if (!window.confirm(t("admin.confirmDeleteRecipe", { title: recipe.title }))) return;
+    if (!window.confirm(`Delete “${recipe.title}”? This also removes its ingredients and instructions.`))
+      return;
     setBusy(true);
     setError("");
     setNotice("");
     try {
       await apiRequest<void>(`/api/v1/recipes/${recipe.recipeId}`, { method: "DELETE" });
-      setNotice(t("admin.deleted", { title: recipe.title }));
+      setNotice(`“${recipe.title}” was deleted.`);
       if (draft.recipeId === recipe.recipeId) setDraft(newRecipe());
       await loadCatalog();
     } catch (cause) {
-      setError(errorText(cause, "admin.recipeDeleteError"));
+      setError(cause instanceof Error ? cause.message : "Could not delete the recipe.");
     } finally {
       setBusy(false);
     }
@@ -168,7 +157,6 @@ export function AdminWorkspace() {
         method: "POST",
         body: JSON.stringify({
           name: ingredientName,
-          nameBn: ingredientNameBn,
           aliases: aliasesInput
             .split(",")
             .map((alias) => alias.trim())
@@ -176,12 +164,11 @@ export function AdminWorkspace() {
         }),
       });
       setIngredientName("");
-      setIngredientNameBn("");
       setAliasesInput("");
-      setNotice(t("admin.ingredientAdded"));
+      setNotice("Ingredient and aliases added.");
       await loadCatalog();
     } catch (cause) {
-      setError(errorText(cause, "admin.ingredientAddError"));
+      setError(cause instanceof Error ? cause.message : "Could not add the ingredient.");
     } finally {
       setBusy(false);
     }
@@ -198,10 +185,10 @@ export function AdminWorkspace() {
         body: JSON.stringify({ alias: aliasText }),
       });
       setAliasText("");
-      setNotice(t("admin.aliasAdded"));
+      setNotice("Alias added.");
       await loadCatalog();
     } catch (cause) {
-      setError(errorText(cause, "admin.aliasAddError"));
+      setError(cause instanceof Error ? cause.message : "Could not add the alias.");
     } finally {
       setBusy(false);
     }
@@ -219,15 +206,13 @@ export function AdminWorkspace() {
           ingredientId: Number(substituteIngredientId),
           substituteId: Number(substituteId),
           note: substituteNote,
-          noteBn: substituteNoteBn,
         }),
       });
       setSubstituteNote("");
-      setSubstituteNoteBn("");
-      setNotice(t("admin.substituteAdded"));
+      setNotice("Substitute mapping added.");
       await loadCatalog();
     } catch (cause) {
-      setError(errorText(cause, "admin.substituteAddError"));
+      setError(cause instanceof Error ? cause.message : "Could not add the substitute.");
     } finally {
       setBusy(false);
     }
@@ -242,17 +227,17 @@ export function AdminWorkspace() {
         method: "DELETE",
         body: JSON.stringify({ ingredientId: item.ingredientId, substituteId: item.substituteId }),
       });
-      setNotice(t("admin.substituteRemoved"));
+      setNotice("Substitute mapping removed.");
       await loadCatalog();
     } catch (cause) {
-      setError(errorText(cause, "admin.substituteRemoveError"));
+      setError(cause instanceof Error ? cause.message : "Could not remove the substitute.");
     } finally {
       setBusy(false);
     }
   }
 
   // Shared wrapper for the small catalog mutations below.
-  async function mutate(action: () => Promise<unknown>, done: string, failed: MessageKey) {
+  async function mutate(action: () => Promise<unknown>, done: string, failed: string) {
     setBusy(true);
     setError("");
     setNotice("");
@@ -261,14 +246,14 @@ export function AdminWorkspace() {
       setNotice(done);
       await loadCatalog();
     } catch (cause) {
-      setError(errorText(cause, failed));
+      setError(cause instanceof Error ? cause.message : failed);
     } finally {
       setBusy(false);
     }
   }
 
   function renameIngredient(item: Ingredient) {
-    const name = window.prompt(t("admin.renamePrompt", { name: item.name }), item.name)?.trim();
+    const name = window.prompt(`Rename “${item.name}” to:`, item.name)?.trim();
     if (!name || name === item.name) return;
     void mutate(
       () =>
@@ -276,22 +261,8 @@ export function AdminWorkspace() {
           method: "PATCH",
           body: JSON.stringify({ name }),
         }),
-      t("admin.renamed"),
-      "admin.renameError",
-    );
-  }
-
-  function setBanglaName(item: Ingredient) {
-    const nameBn = window.prompt(t("admin.banglaPrompt", { name: item.name }), item.nameBn ?? "")?.trim();
-    if (nameBn === undefined || nameBn === (item.nameBn ?? "")) return;
-    void mutate(
-      () =>
-        apiRequest(`/api/v1/ingredients/${item.ingredientId}`, {
-          method: "PATCH",
-          body: JSON.stringify({ nameBn }),
-        }),
-      t("admin.banglaSaved"),
-      "admin.ingredientUpdateError",
+      "Ingredient renamed.",
+      "Could not rename the ingredient.",
     );
   }
 
@@ -303,17 +274,20 @@ export function AdminWorkspace() {
           method: "PATCH",
           body: JSON.stringify({ isStaple: !item.isStaple }),
         }),
-      item.isStaple ? t("admin.stapleOff") : t("admin.stapleOn"),
-      "admin.ingredientUpdateError",
+      item.isStaple ? "Ingredient is no longer a pantry staple." : "Ingredient marked as a pantry staple.",
+      "Could not update the ingredient.",
     );
   }
 
   function deleteIngredient(item: Ingredient) {
-    if (!window.confirm(t("admin.confirmDeleteIngredient", { name: item.name }))) return;
+    if (
+      !window.confirm(`Delete “${item.name}”? Its aliases, substitutes and pantry entries are removed too.`)
+    )
+      return;
     void mutate(
       () => apiRequest<void>(`/api/v1/ingredients/${item.ingredientId}`, { method: "DELETE" }),
-      t("admin.deleted", { title: item.name }),
-      "admin.ingredientDeleteError",
+      `“${item.name}” was deleted.`,
+      "Could not delete the ingredient.",
     );
   }
 
@@ -323,8 +297,8 @@ export function AdminWorkspace() {
         apiRequest<void>(`/api/v1/ingredients/${alias.ingredientId}/aliases/${alias.aliasId}`, {
           method: "DELETE",
         }),
-      t("admin.aliasRemoved", { alias: alias.alias }),
-      "admin.aliasRemoveError",
+      `Alias “${alias.alias}” removed.`,
+      "Could not remove the alias.",
     );
   }
 
@@ -334,27 +308,13 @@ export function AdminWorkspace() {
       async () => {
         await apiRequest(`/api/v1/${labelKind}`, {
           method: "POST",
-          body: JSON.stringify({ name: labelName, nameBn: labelNameBn }),
+          body: JSON.stringify({ name: labelName }),
         });
         setLabelName("");
-        setLabelNameBn("");
       },
-      labelKind === "cuisines" ? t("admin.cuisineAdded") : t("admin.tagAdded"),
-      "admin.labelAddError",
+      labelKind === "cuisines" ? "Cuisine added." : "Dietary tag added.",
+      "Could not add it.",
     );
-  }
-
-  function updateStep(index: number, change: Partial<Step>) {
-    setDraft((current) => ({
-      ...current,
-      steps: current.steps.map((item, itemIndex) => (itemIndex === index ? { ...item, ...change } : item)),
-    }));
-  }
-
-  // Ingredient filters match the English or the Bangla name.
-  function matchesSearch(item: Ingredient) {
-    const search = ingredientSearch.trim().toLowerCase();
-    return item.name.toLowerCase().includes(search) || Boolean(item.nameBn?.includes(search));
   }
 
   const ingredientNameById = new Map(
@@ -363,23 +323,23 @@ export function AdminWorkspace() {
   if (loading && !catalog)
     return (
       <div role="status" className="rounded-3xl bg-white/60 px-5 py-12 text-center font-semibold">
-        {t("admin.loading")}
+        Opening the kitchen catalog…
       </div>
     );
   if (!catalog)
     return (
       <EmptyState
-        title={t("admin.unavailableTitle")}
-        description={error || t("admin.unavailableDescription")}
+        title="Admin catalog unavailable"
+        description={error || "You may need administrator access to manage the catalog."}
       />
     );
 
   return (
     <>
       <PageHeading
-        eyebrow={t("admin.eyebrow")}
-        title={t("admin.title")}
-        description={t("admin.description")}
+        eyebrow="Keep the catalog delicious"
+        title="Kitchen admin"
+        description="Manage CookMatch recipes and the ingredient catalog. Changes are protected by the admin role."
       />
       {error && (
         <p
@@ -396,7 +356,7 @@ export function AdminWorkspace() {
       )}
       <div
         role="tablist"
-        aria-label={t("admin.sections")}
+        aria-label="Catalog sections"
         className="mb-6 flex w-fit gap-2 rounded-full bg-line p-1.5"
       >
         {(["recipes", "ingredients"] as const).map((value) => (
@@ -408,7 +368,7 @@ export function AdminWorkspace() {
             onClick={() => setTab(value)}
             className={`min-h-11 rounded-full px-5 text-sm font-extrabold capitalize ${tab === value ? "bg-white shadow-sm" : "text-muted"}`}
           >
-            {value === "recipes" ? t("admin.tabRecipes") : t("admin.tabIngredients")}
+            {value === "recipes" ? "Recipes" : "Ingredients & substitutes"}
           </button>
         ))}
       </div>
@@ -419,10 +379,10 @@ export function AdminWorkspace() {
             <div className="mb-5 flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.15em] text-clay">
-                  {draft.recipeId ? t("admin.editRecipe") : t("admin.newRecipe")}
+                  {draft.recipeId ? "Edit recipe" : "New recipe"}
                 </p>
                 <h2 className="mt-1 text-2xl font-black">
-                  {draft.recipeId ? t("admin.updateDish") : t("admin.addDish")}
+                  {draft.recipeId ? "Update a dish" : "Add a dish"}
                 </h2>
               </div>
               {draft.recipeId && (
@@ -431,14 +391,14 @@ export function AdminWorkspace() {
                   onClick={() => setDraft(newRecipe())}
                   className="text-sm font-bold underline underline-offset-4"
                 >
-                  {t("admin.cancelEdit")}
+                  Cancel edit
                 </button>
               )}
             </div>
             <form onSubmit={saveRecipe} className="space-y-4">
               <div>
                 <label htmlFor="recipe-title" className="mb-1.5 block text-sm font-bold">
-                  {t("admin.recipeTitle")}
+                  Recipe title
                 </label>
                 <input
                   id="recipe-title"
@@ -450,23 +410,8 @@ export function AdminWorkspace() {
                 />
               </div>
               <div>
-                <label htmlFor="recipe-title-bn" className="mb-1.5 block text-sm font-bold">
-                  {t("admin.recipeTitleBn")}{" "}
-                  <span className="font-medium text-subtle">{t("common.optional")}</span>
-                </label>
-                <input
-                  id="recipe-title-bn"
-                  lang="bn"
-                  maxLength={200}
-                  value={draft.titleBn}
-                  onChange={(event) => setDraft((current) => ({ ...current, titleBn: event.target.value }))}
-                  className={inputClass}
-                />
-                <p className="mt-1.5 text-xs leading-5 text-muted">{t("admin.banglaHelp")}</p>
-              </div>
-              <div>
                 <label htmlFor="recipe-description" className="mb-1.5 block text-sm font-bold">
-                  {t("admin.recipeDescription")}
+                  Description
                 </label>
                 <textarea
                   id="recipe-description"
@@ -479,27 +424,10 @@ export function AdminWorkspace() {
                   className={`${inputClass} resize-y`}
                 />
               </div>
-              <div>
-                <label htmlFor="recipe-description-bn" className="mb-1.5 block text-sm font-bold">
-                  {t("admin.recipeDescriptionBn")}{" "}
-                  <span className="font-medium text-subtle">{t("common.optional")}</span>
-                </label>
-                <textarea
-                  id="recipe-description-bn"
-                  lang="bn"
-                  maxLength={5000}
-                  rows={3}
-                  value={draft.descriptionBn}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, descriptionBn: event.target.value }))
-                  }
-                  className={`${inputClass} resize-y`}
-                />
-              </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label htmlFor="recipe-cuisine" className="mb-1.5 block text-sm font-bold">
-                    {t("admin.cuisine")}
+                    Cuisine
                   </label>
                   <select
                     id="recipe-cuisine"
@@ -512,7 +440,7 @@ export function AdminWorkspace() {
                     }
                     className={inputClass}
                   >
-                    <option value="">{t("admin.notSpecified")}</option>
+                    <option value="">Not specified</option>
                     {catalog.cuisines.map((item) => (
                       <option key={item.cuisineId} value={item.cuisineId}>
                         {item.name}
@@ -522,7 +450,7 @@ export function AdminWorkspace() {
                 </div>
                 <div>
                   <label htmlFor="recipe-time" className="mb-1.5 block text-sm font-bold">
-                    {t("admin.minutes")}
+                    Minutes
                   </label>
                   <input
                     id="recipe-time"
@@ -540,8 +468,7 @@ export function AdminWorkspace() {
               </div>
               <div>
                 <label htmlFor="recipe-image" className="mb-1.5 block text-sm font-bold">
-                  {t("admin.imageUrl")}{" "}
-                  <span className="font-medium text-subtle">{t("common.optional")}</span>
+                  Image URL <span className="font-medium text-subtle">(optional)</span>
                 </label>
                 <input
                   id="recipe-image"
@@ -554,21 +481,19 @@ export function AdminWorkspace() {
               </div>
               <fieldset>
                 <legend className="mb-2 text-sm font-extrabold">
-                  {t("admin.ingredients")}{" "}
-                  <span className="font-medium text-subtle">
-                    {t("admin.selectedCount", { count: draft.ingredientIds.length })}
-                  </span>
+                  Ingredients{" "}
+                  <span className="font-medium text-subtle">({draft.ingredientIds.length} selected)</span>
                 </legend>
                 <input
-                  aria-label={t("admin.searchIngredients")}
+                  aria-label="Search ingredients"
                   value={ingredientSearch}
                   onChange={(event) => setIngredientSearch(event.target.value)}
                   className={`${inputClass} mb-2`}
-                  placeholder={t("admin.filterIngredients")}
+                  placeholder="Filter ingredient list"
                 />
                 <div className="grid max-h-48 grid-cols-2 gap-1 overflow-y-auto rounded-2xl bg-cream/70 p-2">
                   {catalog.ingredients
-                    .filter((item) => matchesSearch(item))
+                    .filter((item) => item.name.toLowerCase().includes(ingredientSearch.toLowerCase()))
                     .map((item) => (
                       <label
                         key={item.ingredientId}
@@ -586,7 +511,7 @@ export function AdminWorkspace() {
                 </div>
               </fieldset>
               <fieldset>
-                <legend className="mb-2 text-sm font-extrabold">{t("admin.dietaryTags")}</legend>
+                <legend className="mb-2 text-sm font-extrabold">Dietary tags</legend>
                 <div className="flex flex-wrap gap-2">
                   {catalog.dietaryTags.map((tag) => (
                     <label
@@ -605,48 +530,40 @@ export function AdminWorkspace() {
                 </div>
               </fieldset>
               <fieldset>
-                <legend className="mb-2 text-sm font-extrabold">{t("admin.instructions")}</legend>
+                <legend className="mb-2 text-sm font-extrabold">Instructions</legend>
                 <div className="space-y-2">
                   {draft.steps.map((step, index) => (
                     <div key={index} className="flex items-start gap-2">
+                      <label className="sr-only" htmlFor={`step-${index}`}>
+                        Step {index + 1}
+                      </label>
                       <span
                         aria-hidden="true"
                         className="mt-2 grid size-8 shrink-0 place-items-center rounded-full bg-butter text-xs font-black"
                       >
-                        {digits(index + 1)}
+                        {index + 1}
                       </span>
-                      <div className="min-w-0 flex-1 space-y-1.5">
-                        <label className="sr-only" htmlFor={`step-${index}`}>
-                          {t("admin.stepLabel", { count: index + 1 })}
-                        </label>
-                        <textarea
-                          id={`step-${index}`}
-                          required
-                          maxLength={5000}
-                          rows={2}
-                          value={step.instruction}
-                          onChange={(event) => updateStep(index, { instruction: event.target.value })}
-                          className={`${inputClass} min-h-0 resize-y`}
-                          placeholder={t("admin.stepPlaceholder")}
-                        />
-                        <label className="sr-only" htmlFor={`step-bn-${index}`}>
-                          {t("admin.stepLabelBn", { count: index + 1 })}
-                        </label>
-                        <textarea
-                          id={`step-bn-${index}`}
-                          lang="bn"
-                          maxLength={5000}
-                          rows={2}
-                          value={step.instructionBn}
-                          onChange={(event) => updateStep(index, { instructionBn: event.target.value })}
-                          className={`${inputClass} min-h-0 resize-y`}
-                          placeholder={t("admin.stepPlaceholderBn")}
-                        />
-                      </div>
+                      <textarea
+                        id={`step-${index}`}
+                        required
+                        maxLength={5000}
+                        rows={2}
+                        value={step.instruction}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            steps: current.steps.map((item, itemIndex) =>
+                              itemIndex === index ? { instruction: event.target.value } : item,
+                            ),
+                          }))
+                        }
+                        className={`${inputClass} min-h-0 resize-y`}
+                        placeholder="Describe this cooking step"
+                      />
                       {draft.steps.length > 1 && (
                         <button
                           type="button"
-                          aria-label={t("admin.removeStep", { count: index + 1 })}
+                          aria-label={`Remove step ${index + 1}`}
                           onClick={() =>
                             setDraft((current) => ({
                               ...current,
@@ -664,14 +581,11 @@ export function AdminWorkspace() {
                 <button
                   type="button"
                   onClick={() =>
-                    setDraft((current) => ({
-                      ...current,
-                      steps: [...current.steps, { instruction: "", instructionBn: "" }],
-                    }))
+                    setDraft((current) => ({ ...current, steps: [...current.steps, { instruction: "" }] }))
                   }
                   className="mt-3 min-h-10 rounded-full px-3 text-sm font-bold underline underline-offset-4"
                 >
-                  {t("admin.addStep")}
+                  + Add a step
                 </button>
               </fieldset>
               <label className="flex min-h-12 items-center gap-3 rounded-2xl bg-mint/60 px-4 text-sm font-bold">
@@ -683,7 +597,7 @@ export function AdminWorkspace() {
                   }
                   className="size-5 accent-success"
                 />
-                {t("admin.publish")}
+                Publish this recipe
               </label>
               <button
                 type="submit"
@@ -694,7 +608,7 @@ export function AdminWorkspace() {
                 }
                 className={`${buttonPrimary} w-full`}
               >
-                {busy ? t("common.saving") : draft.recipeId ? t("admin.saveChanges") : t("admin.createRecipe")}
+                {busy ? "Saving…" : draft.recipeId ? "Save changes" : "Create recipe"}
               </button>
             </form>
           </Panel>
@@ -702,9 +616,9 @@ export function AdminWorkspace() {
           <div>
             <div className="mb-4 flex items-end justify-between gap-3">
               <div>
-                <h2 className="text-xl font-extrabold">{t("admin.catalogTitle")}</h2>
+                <h2 className="text-xl font-extrabold">Recipe catalog</h2>
                 <p className="mt-1 text-sm text-muted">
-                  {t("admin.catalogCount", { count: catalog.recipes.length })}
+                  {catalog.recipes.length} recipes · select one to edit
                 </p>
               </div>
             </div>
@@ -721,28 +635,20 @@ export function AdminWorkspace() {
                         <span
                           className={`rounded-full px-2.5 py-1 text-[11px] font-extrabold ${recipe.isPublished ? "bg-mint" : "bg-butter"}`}
                         >
-                          {recipe.isPublished ? t("admin.published") : t("admin.draft")}
+                          {recipe.isPublished ? "Published" : "Draft"}
                         </span>
                       </div>
-                      {recipe.titleBn && (
-                        <p lang="bn" className="mt-0.5 text-sm font-semibold text-muted">
-                          {recipe.titleBn}
-                        </p>
-                      )}
                       <p className="mt-1 text-xs text-muted">
-                        {t("admin.recipeMeta", {
-                          minutes: recipe.cookingTimeMin,
-                          ingredients: recipe.ingredientIds.length,
-                          steps: recipe.steps.length,
-                        })}
+                        {recipe.cookingTimeMin} min · {recipe.ingredientIds.length} ingredients ·{" "}
+                        {recipe.steps.length} steps
                       </p>
                     </div>
                     <div className="flex gap-2">
                       <a href={`/recipes/${recipe.recipeId}`} className={buttonSecondary}>
-                        {t("admin.preview")}
+                        Preview
                       </a>
                       <button type="button" onClick={() => editRecipe(recipe)} className={buttonSecondary}>
-                        {t("admin.edit")}
+                        Edit
                       </button>
                       <button
                         type="button"
@@ -750,7 +656,7 @@ export function AdminWorkspace() {
                         onClick={() => void deleteRecipe(recipe)}
                         className="min-h-11 rounded-full border border-line-strong px-4 text-sm font-bold text-danger hover:bg-blush focus-visible:outline-4 focus-visible:outline-danger disabled:opacity-50"
                       >
-                        {t("common.delete")}
+                        Delete
                       </button>
                     </div>
                   </li>
@@ -758,8 +664,8 @@ export function AdminWorkspace() {
               </ul>
             ) : (
               <EmptyState
-                title={t("admin.noRecipesTitle")}
-                description={t("admin.noRecipesDescription")}
+                title="No recipes yet"
+                description="Add your first CookMatch recipe using the form."
               />
             )}
           </div>
@@ -768,14 +674,12 @@ export function AdminWorkspace() {
         <div className="grid items-start gap-6 xl:grid-cols-2">
           <div className="space-y-6">
             <Panel>
-              <p className="text-xs font-black uppercase tracking-[0.15em] text-clay">
-                {t("admin.catalogEyebrow")}
-              </p>
-              <h2 className="mt-1 text-2xl font-black">{t("admin.addIngredient")}</h2>
+              <p className="text-xs font-black uppercase tracking-[0.15em] text-clay">Catalog</p>
+              <h2 className="mt-1 text-2xl font-black">Add an ingredient</h2>
               <form onSubmit={createIngredient} className="mt-5 space-y-4">
                 <div>
                   <label htmlFor="ingredient-name" className="mb-1.5 block text-sm font-bold">
-                    {t("admin.ingredientName")}
+                    Ingredient name
                   </label>
                   <input
                     id="ingredient-name"
@@ -787,46 +691,29 @@ export function AdminWorkspace() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="ingredient-name-bn" className="mb-1.5 block text-sm font-bold">
-                    {t("admin.ingredientNameBn")}{" "}
-                    <span className="font-medium text-subtle">{t("common.optional")}</span>
-                  </label>
-                  <input
-                    id="ingredient-name-bn"
-                    lang="bn"
-                    maxLength={100}
-                    value={ingredientNameBn}
-                    onChange={(event) => setIngredientNameBn(event.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
                   <label htmlFor="ingredient-aliases" className="mb-1.5 block text-sm font-bold">
-                    {t("admin.aliases")}{" "}
-                    <span className="font-medium text-subtle">{t("admin.commaSeparated")}</span>
+                    Aliases <span className="font-medium text-subtle">(comma separated)</span>
                   </label>
                   <input
                     id="ingredient-aliases"
                     value={aliasesInput}
                     onChange={(event) => setAliasesInput(event.target.value)}
                     className={inputClass}
-                    placeholder={t("admin.aliasesPlaceholder")}
+                    placeholder="e.g. cilantro, dhone pata"
                   />
                 </div>
                 <button disabled={busy} className={buttonPrimary}>
-                  {busy ? t("common.saving") : t("admin.addIngredientButton")}
+                  {busy ? "Saving…" : "Add ingredient"}
                 </button>
               </form>
             </Panel>
             <Panel>
-              <p className="text-xs font-black uppercase tracking-[0.15em] text-clay">
-                {t("admin.searchEyebrow")}
-              </p>
-              <h2 className="mt-1 text-2xl font-black">{t("admin.addAlias")}</h2>
+              <p className="text-xs font-black uppercase tracking-[0.15em] text-clay">Search & matching</p>
+              <h2 className="mt-1 text-2xl font-black">Add an alias</h2>
               <form onSubmit={createAlias} className="mt-5 space-y-4">
                 <div>
                   <label htmlFor="alias-ingredient" className="mb-1.5 block text-sm font-bold">
-                    {t("admin.ingredient")}
+                    Ingredient
                   </label>
                   <select
                     id="alias-ingredient"
@@ -835,7 +722,7 @@ export function AdminWorkspace() {
                     onChange={(event) => setAliasIngredientId(event.target.value)}
                     className={inputClass}
                   >
-                    <option value="">{t("admin.chooseIngredient")}</option>
+                    <option value="">Choose ingredient</option>
                     {catalog.ingredients.map((item) => (
                       <option key={item.ingredientId} value={item.ingredientId}>
                         {item.name}
@@ -845,7 +732,7 @@ export function AdminWorkspace() {
                 </div>
                 <div>
                   <label htmlFor="alias-name" className="mb-1.5 block text-sm font-bold">
-                    {t("admin.alias")}
+                    Alias
                   </label>
                   <input
                     id="alias-name"
@@ -857,20 +744,18 @@ export function AdminWorkspace() {
                   />
                 </div>
                 <button disabled={busy} className={buttonPrimary}>
-                  {t("admin.addAliasButton")}
+                  Add alias
                 </button>
               </form>
             </Panel>
             <Panel>
-              <p className="text-xs font-black uppercase tracking-[0.15em] text-clay">
-                {t("admin.filtersEyebrow")}
-              </p>
-              <h2 className="mt-1 text-2xl font-black">{t("admin.addLabel")}</h2>
+              <p className="text-xs font-black uppercase tracking-[0.15em] text-clay">Recipe filters</p>
+              <h2 className="mt-1 text-2xl font-black">Add a cuisine or dietary tag</h2>
               <form onSubmit={createLabel} className="mt-5 space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <label htmlFor="label-kind" className="mb-1.5 block text-sm font-bold">
-                      {t("admin.type")}
+                      Type
                     </label>
                     <select
                       id="label-kind"
@@ -878,13 +763,13 @@ export function AdminWorkspace() {
                       onChange={(event) => setLabelKind(event.target.value as typeof labelKind)}
                       className={inputClass}
                     >
-                      <option value="cuisines">{t("admin.typeCuisine")}</option>
-                      <option value="dietary-tags">{t("admin.typeTag")}</option>
+                      <option value="cuisines">Cuisine</option>
+                      <option value="dietary-tags">Dietary tag</option>
                     </select>
                   </div>
                   <div>
                     <label htmlFor="label-name" className="mb-1.5 block text-sm font-bold">
-                      {t("admin.name")}
+                      Name
                     </label>
                     <input
                       id="label-name"
@@ -896,42 +781,26 @@ export function AdminWorkspace() {
                     />
                   </div>
                 </div>
-                <div>
-                  <label htmlFor="label-name-bn" className="mb-1.5 block text-sm font-bold">
-                    {t("admin.ingredientNameBn")}{" "}
-                    <span className="font-medium text-subtle">{t("common.optional")}</span>
-                  </label>
-                  <input
-                    id="label-name-bn"
-                    lang="bn"
-                    maxLength={50}
-                    value={labelNameBn}
-                    onChange={(event) => setLabelNameBn(event.target.value)}
-                    className={inputClass}
-                  />
-                </div>
                 <p className="text-xs leading-5 text-muted">
-                  {t("admin.existing")}{" "}
+                  Existing:{" "}
                   {[...catalog.cuisines, ...catalog.dietaryTags].map((item) => item.name).join(" · ") ||
-                    t("admin.noneYet")}
+                    "none yet"}
                 </p>
                 <button disabled={busy} className={buttonPrimary}>
-                  {t("admin.add")}
+                  Add
                 </button>
               </form>
             </Panel>
           </div>
           <div className="space-y-6">
             <Panel>
-              <p className="text-xs font-black uppercase tracking-[0.15em] text-clay">
-                {t("admin.swapsEyebrow")}
-              </p>
-              <h2 className="mt-1 text-2xl font-black">{t("admin.addSubstitute")}</h2>
+              <p className="text-xs font-black uppercase tracking-[0.15em] text-clay">Ingredient swaps</p>
+              <h2 className="mt-1 text-2xl font-black">Add a substitute</h2>
               <form onSubmit={createSubstitute} className="mt-5 space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <label htmlFor="missing-item" className="mb-1.5 block text-sm font-bold">
-                      {t("admin.toReplace")}
+                      Ingredient to replace
                     </label>
                     <select
                       id="missing-item"
@@ -940,7 +809,7 @@ export function AdminWorkspace() {
                       onChange={(event) => setSubstituteIngredientId(event.target.value)}
                       className={inputClass}
                     >
-                      <option value="">{t("admin.chooseIngredient")}</option>
+                      <option value="">Choose ingredient</option>
                       {catalog.ingredients.map((item) => (
                         <option key={item.ingredientId} value={item.ingredientId}>
                           {item.name}
@@ -950,7 +819,7 @@ export function AdminWorkspace() {
                   </div>
                   <div>
                     <label htmlFor="replacement-item" className="mb-1.5 block text-sm font-bold">
-                      {t("admin.possibleSubstitute")}
+                      Possible substitute
                     </label>
                     <select
                       id="replacement-item"
@@ -959,7 +828,7 @@ export function AdminWorkspace() {
                       onChange={(event) => setSubstituteId(event.target.value)}
                       className={inputClass}
                     >
-                      <option value="">{t("admin.chooseIngredient")}</option>
+                      <option value="">Choose ingredient</option>
                       {catalog.ingredients.map((item) => (
                         <option key={item.ingredientId} value={item.ingredientId}>
                           {item.name}
@@ -970,7 +839,7 @@ export function AdminWorkspace() {
                 </div>
                 <div>
                   <label htmlFor="sub-note" className="mb-1.5 block text-sm font-bold">
-                    {t("admin.note")} <span className="font-medium text-subtle">{t("common.optional")}</span>
+                    Note <span className="font-medium text-subtle">(optional)</span>
                   </label>
                   <input
                     id="sub-note"
@@ -978,28 +847,15 @@ export function AdminWorkspace() {
                     value={substituteNote}
                     onChange={(event) => setSubstituteNote(event.target.value)}
                     className={inputClass}
-                    placeholder={t("admin.notePlaceholder")}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="sub-note-bn" className="mb-1.5 block text-sm font-bold">
-                    {t("admin.noteBn")} <span className="font-medium text-subtle">{t("common.optional")}</span>
-                  </label>
-                  <input
-                    id="sub-note-bn"
-                    lang="bn"
-                    maxLength={255}
-                    value={substituteNoteBn}
-                    onChange={(event) => setSubstituteNoteBn(event.target.value)}
-                    className={inputClass}
+                    placeholder="How should it be used?"
                   />
                 </div>
                 <button disabled={busy} className={buttonPrimary}>
-                  {t("admin.addSubstituteButton")}
+                  Add substitute
                 </button>
               </form>
               <div className="mt-6 border-t border-line pt-5">
-                <h3 className="font-extrabold">{t("admin.currentSwaps")}</h3>
+                <h3 className="font-extrabold">Current swaps</h3>
                 {catalog.substitutes.length ? (
                   <ul className="mt-3 space-y-2">
                     {catalog.substitutes.map((item) => (
@@ -1008,33 +864,24 @@ export function AdminWorkspace() {
                         className="flex items-center justify-between gap-3 rounded-xl bg-lavender/40 px-3 py-2.5 text-sm"
                       >
                         <span>
-                          <strong>
-                            {ingredientNameById.get(item.ingredientId) ?? t("admin.fallbackIngredient")}
-                          </strong>{" "}
-                          → {ingredientNameById.get(item.substituteId) ?? t("admin.fallbackSubstitute")}
+                          <strong>{ingredientNameById.get(item.ingredientId) ?? "Ingredient"}</strong> →{" "}
+                          {ingredientNameById.get(item.substituteId) ?? "Substitute"}
                           {item.note && <span className="block text-xs text-muted">{item.note}</span>}
-                          {item.noteBn && (
-                            <span lang="bn" className="block text-xs text-muted">
-                              {item.noteBn}
-                            </span>
-                          )}
                         </span>
                         <button
                           type="button"
                           disabled={busy}
-                          aria-label={t("admin.removeNamed", {
-                            name: ingredientNameById.get(item.substituteId) ?? t("admin.fallbackSubstitute"),
-                          })}
+                          aria-label={`Remove ${ingredientNameById.get(item.substituteId) ?? "substitute"}`}
                           onClick={() => void deleteSubstitute(item)}
                           className="min-h-10 rounded-lg px-3 font-bold text-danger hover:bg-white/70"
                         >
-                          {t("common.remove")}
+                          Remove
                         </button>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-2 text-sm text-muted">{t("admin.noSubstitutes")}</p>
+                  <p className="mt-2 text-sm text-muted">No substitute mappings yet.</p>
                 )}
               </div>
             </Panel>
@@ -1043,23 +890,23 @@ export function AdminWorkspace() {
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.15em] text-clay">
-                  {t("admin.dictionaryEyebrow")}
+                  Ingredient dictionary
                 </p>
-                <h2 className="mt-1 text-2xl font-black">{t("admin.dictionaryTitle")}</h2>
+                <h2 className="mt-1 text-2xl font-black">Ingredients and aliases</h2>
               </div>
               <input
-                aria-label={t("admin.filterIngredients")}
+                aria-label="Filter ingredient list"
                 value={ingredientSearch}
                 onChange={(event) => setIngredientSearch(event.target.value)}
                 className={`${inputClass} max-w-sm`}
-                placeholder={t("admin.searchIngredients")}
+                placeholder="Search ingredients"
               />
             </div>
             <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {catalog.ingredients
                 .filter(
                   (item) =>
-                    matchesSearch(item) ||
+                    item.name.toLowerCase().includes(ingredientSearch.toLowerCase()) ||
                     catalog.aliases.some(
                       (alias) =>
                         alias.ingredientId === item.ingredientId &&
@@ -1073,7 +920,7 @@ export function AdminWorkspace() {
                         {item.name}
                         {item.isStaple && (
                           <span className="ml-2 rounded-full bg-butter px-2 py-0.5 text-[11px] font-bold">
-                            {t("admin.staple")}
+                            Staple
                           </span>
                         )}
                       </h3>
@@ -1083,45 +930,31 @@ export function AdminWorkspace() {
                           disabled={busy}
                           onClick={() => toggleStaple(item)}
                           aria-pressed={Boolean(item.isStaple)}
-                          aria-label={t(item.isStaple ? "admin.unmarkStaple" : "admin.markStaple", {
-                            name: item.name,
-                          })}
+                          aria-label={`${item.isStaple ? "Unmark" : "Mark"} ${item.name} as a pantry staple`}
                           className="min-h-11 rounded-lg px-2 text-xs font-bold underline underline-offset-4 hover:bg-white focus-visible:outline-4 focus-visible:outline-cocoa disabled:opacity-50"
                         >
-                          {item.isStaple ? t("admin.notStaple") : t("admin.staple")}
+                          {item.isStaple ? "Not a staple" : "Staple"}
                         </button>
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => renameIngredient(item)}
-                          aria-label={t("admin.renameNamed", { name: item.name })}
+                          aria-label={`Rename ${item.name}`}
                           className="min-h-11 rounded-lg px-2 text-xs font-bold underline underline-offset-4 hover:bg-white focus-visible:outline-4 focus-visible:outline-cocoa disabled:opacity-50"
                         >
-                          {t("admin.rename")}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => setBanglaName(item)}
-                          aria-label={t("admin.banglaNamed", { name: item.name })}
-                          className="min-h-11 rounded-lg px-2 text-xs font-bold underline underline-offset-4 hover:bg-white focus-visible:outline-4 focus-visible:outline-cocoa disabled:opacity-50"
-                        >
-                          {t("admin.bangla")}
+                          Rename
                         </button>
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => deleteIngredient(item)}
-                          aria-label={t("admin.deleteNamed", { name: item.name })}
+                          aria-label={`Delete ${item.name}`}
                           className="min-h-11 rounded-lg px-2 text-xs font-bold text-danger hover:bg-blush focus-visible:outline-4 focus-visible:outline-danger disabled:opacity-50"
                         >
-                          {t("common.delete")}
+                          Delete
                         </button>
                       </div>
                     </div>
-                    <p lang={item.nameBn ? "bn" : undefined} className="text-sm font-semibold text-muted">
-                      {item.nameBn || t("admin.noBangla")}
-                    </p>
                     {catalog.aliases.some((alias) => alias.ingredientId === item.ingredientId) ? (
                       <ul className="mt-1 flex flex-wrap gap-1.5">
                         {catalog.aliases
@@ -1136,7 +969,7 @@ export function AdminWorkspace() {
                                 type="button"
                                 disabled={busy}
                                 onClick={() => deleteAlias(alias)}
-                                aria-label={t("admin.removeAlias", { alias: alias.alias })}
+                                aria-label={`Remove alias ${alias.alias}`}
                                 className="grid size-8 place-items-center rounded-full font-bold text-danger hover:bg-blush focus-visible:outline-4 focus-visible:outline-danger disabled:opacity-50"
                               >
                                 ×
@@ -1145,7 +978,7 @@ export function AdminWorkspace() {
                           ))}
                       </ul>
                     ) : (
-                      <p className="mt-1 text-xs leading-5 text-muted">{t("admin.noAliases")}</p>
+                      <p className="mt-1 text-xs leading-5 text-muted">No aliases</p>
                     )}
                   </li>
                 ))}

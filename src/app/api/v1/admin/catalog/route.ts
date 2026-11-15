@@ -34,21 +34,14 @@ export async function GET() {
         fetchAll((from, to) =>
           supabase
             .from("recipes")
-            .select(
-              "id,title,title_bn,description,description_bn,cuisine_id,cooking_time_min,image_url,is_published",
-            )
+            .select("id,title,description,cuisine_id,cooking_time_min,image_url,is_published")
             .eq("source", "cookmatch")
             .order("title")
             .order("id")
             .range(from, to),
         ),
         fetchAll((from, to) =>
-          supabase
-            .from("ingredients")
-            .select("id,name,name_bn,is_staple")
-            .order("name")
-            .order("id")
-            .range(from, to),
+          supabase.from("ingredients").select("id,name,is_staple").order("name").order("id").range(from, to),
         ),
         fetchAll((from, to) =>
           supabase
@@ -58,12 +51,8 @@ export async function GET() {
             .order("id")
             .range(from, to),
         ),
-        fetchAll((from, to) =>
-          supabase.from("cuisines").select("id,name,name_bn").order("name").range(from, to),
-        ),
-        fetchAll((from, to) =>
-          supabase.from("dietary_tags").select("id,name,name_bn").order("name").range(from, to),
-        ),
+        fetchAll((from, to) => supabase.from("cuisines").select("id,name").order("name").range(from, to)),
+        fetchAll((from, to) => supabase.from("dietary_tags").select("id,name").order("name").range(from, to)),
         fetchAll((from, to) =>
           supabase
             .from("recipe_ingredients")
@@ -83,7 +72,7 @@ export async function GET() {
         fetchAll((from, to) =>
           supabase
             .from("recipe_steps")
-            .select("recipe_id,step_number,instruction,instruction_bn")
+            .select("recipe_id,step_number,instruction")
             .order("recipe_id")
             .order("step_number")
             .range(from, to),
@@ -91,7 +80,7 @@ export async function GET() {
         fetchAll((from, to) =>
           supabase
             .from("substitutes")
-            .select("ingredient_id,substitute_id,note,note_bn")
+            .select("ingredient_id,substitute_id,note")
             .order("ingredient_id")
             .order("substitute_id")
             .range(from, to),
@@ -105,24 +94,18 @@ export async function GET() {
       recipes: recipes.map((recipe) => ({
         recipeId: recipe.id,
         title: recipe.title,
-        titleBn: recipe.title_bn ?? "",
         description: recipe.description ?? "",
-        descriptionBn: recipe.description_bn ?? "",
         cuisineId: recipe.cuisine_id,
         cookingTimeMin: recipe.cooking_time_min,
         imageUrl: recipe.image_url ?? "",
         isPublished: recipe.is_published,
         ingredientIds: (ingredientsByRecipe.get(recipe.id) ?? []).map((row) => row.ingredient_id),
         dietaryTagIds: (tagsByRecipe.get(recipe.id) ?? []).map((row) => row.tag_id),
-        steps: (stepsByRecipe.get(recipe.id) ?? []).map((row) => ({
-          instruction: row.instruction,
-          instructionBn: row.instruction_bn ?? "",
-        })),
+        steps: (stepsByRecipe.get(recipe.id) ?? []).map((row) => ({ instruction: row.instruction })),
       })),
-      ingredients: ingredients.map(({ id, name, name_bn, is_staple }) => ({
+      ingredients: ingredients.map(({ id, name, is_staple }) => ({
         ingredientId: id,
         name,
-        nameBn: name_bn,
         isStaple: is_staple,
       })),
       aliases: aliases.map(({ id, ingredient_id, alias }) => ({
@@ -130,13 +113,12 @@ export async function GET() {
         ingredientId: ingredient_id,
         alias,
       })),
-      cuisines: cuisines.map(({ id, name, name_bn }) => ({ cuisineId: id, name, nameBn: name_bn })),
-      dietaryTags: tags.map(({ id, name, name_bn }) => ({ tagId: id, name, nameBn: name_bn })),
-      substitutes: substitutes.map(({ ingredient_id, substitute_id, note, note_bn }) => ({
+      cuisines: cuisines.map(({ id, name }) => ({ cuisineId: id, name })),
+      dietaryTags: tags.map(({ id, name }) => ({ tagId: id, name })),
+      substitutes: substitutes.map(({ ingredient_id, substitute_id, note }) => ({
         ingredientId: ingredient_id,
         substituteId: substitute_id,
         note,
-        noteBn: note_bn,
       })),
     });
   } catch (error) {
